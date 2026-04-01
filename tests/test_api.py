@@ -87,3 +87,45 @@ async def test_direct_message():
         assert resp.status_code == 200
         data = resp.json()
         assert data["target"] == "phase-1"
+
+
+@pytest.mark.asyncio
+async def test_browse_home():
+    from server import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        import os
+        home = os.path.expanduser("~")
+        resp = await client.get(f"/api/browse?path={home}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["current"] == home
+        assert "parent" in data
+        assert "directories" in data
+        assert isinstance(data["directories"], list)
+        assert len(data["directories"]) > 0
+        for d in data["directories"]:
+            assert "name" in d
+            assert "path" in d
+        names = [d["name"] for d in data["directories"]]
+        assert ".Trash" not in names
+        assert "Library" not in names
+        assert "Applications" not in names
+
+
+@pytest.mark.asyncio
+async def test_browse_security_boundary():
+    from server import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/browse?path=/etc")
+        assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_browse_nonexistent():
+    from server import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/browse?path=/Users/gurvindersingh/nonexistent_dir_xyz")
+        assert resp.status_code == 404

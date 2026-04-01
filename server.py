@@ -30,6 +30,9 @@ AGENT_DIRS: dict[str, str] = {a["name"]: PROJECT_PATH for a in AGENTS}
 
 MAX_TMUX_MSG_LEN = 500
 
+SYSTEM_DIRS = {"Library", "Applications", "Public", "Movies", "Music", "Pictures"}
+HOME_DIR = str(Path.home())
+
 # Braille spinner characters Claude Code uses when working
 SPINNER_CHARS = set("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
 
@@ -407,6 +410,33 @@ async def list_agents():
         }
         for a in AGENTS
     ]
+
+
+@app.get("/api/browse")
+async def browse_directory(path: str = "~"):
+    """List directories in the given path for the directory picker."""
+    expanded = str(Path(path).expanduser().resolve())
+    if not expanded.startswith(HOME_DIR):
+        return JSONResponse({"error": "Path must be under home directory"}, status_code=403)
+    if not Path(expanded).is_dir():
+        return JSONResponse({"error": f"Directory not found: {path}"}, status_code=404)
+    parent = str(Path(expanded).parent)
+    if not parent.startswith(HOME_DIR):
+        parent = HOME_DIR
+    directories = []
+    try:
+        for entry in sorted(Path(expanded).iterdir()):
+            if not entry.is_dir():
+                continue
+            name = entry.name
+            if name.startswith(".") and name != ".claude":
+                continue
+            if expanded == HOME_DIR and name in SYSTEM_DIRS:
+                continue
+            directories.append({"name": name, "path": str(entry)})
+    except PermissionError:
+        return JSONResponse({"error": "Permission denied"}, status_code=403)
+    return {"current": expanded, "parent": parent, "directories": directories}
 
 
 @app.post("/api/agents/{agent_name}/deboard")
