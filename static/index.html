@@ -295,8 +295,48 @@
 
   .messages { flex: 1; overflow-y: auto; padding: 16px 24px; }
 
-  .msg {
+  /* Operator card (gurvinder) — visually distinct */
+  .ac-operator {
+    background: linear-gradient(135deg, rgba(255,145,0,0.06) 0%, var(--bg-card) 100%);
+    border-color: rgba(255,145,0,0.2);
     margin-bottom: 10px;
+  }
+
+  .ac-operator:hover { border-color: rgba(255,145,0,0.35); }
+
+  .ac-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0 8px;
+  }
+
+  /* Role tooltip */
+  .ac-role {
+    position: relative;
+    cursor: default;
+  }
+
+  .ac-role[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-bright);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: normal;
+    width: 240px;
+    z-index: 50;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .msg {
+    margin-bottom: 2px;
     padding: 8px 14px;
     border-radius: 6px;
     background: var(--bg-card);
@@ -304,10 +344,27 @@
     animation: fadein 0.15s ease-out;
   }
 
+  /* Grouped messages: same sender in a row — hide header, tighter spacing */
+  .msg.grouped {
+    margin-top: 0;
+    padding-top: 2px;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .msg.grouped .msg-head { display: none; }
+
+  .msg.group-start {
+    margin-top: 10px;
+    border-radius: 6px 6px 0 0;
+    padding-bottom: 2px;
+  }
+
+  .msg.standalone { margin-bottom: 10px; }
+
   @keyframes fadein { from { opacity: 0; transform: translateY(3px); } }
 
   .msg.direct { background: var(--orange-dim); border-left-color: var(--orange); }
-  .msg.system { background: transparent; border-left: none; color: var(--text-dim); font-style: italic; font-size: 11px; padding: 3px 14px; animation: none; }
+  .msg.system { background: transparent; border-left: none; color: var(--text-dim); font-style: italic; font-size: 11px; padding: 3px 14px; animation: none; margin-bottom: 6px; }
 
   .msg-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
 
@@ -927,7 +984,7 @@ function connect() {
   ws.onerror = () => ws.close();
   ws.onmessage = (e) => {
     const d = JSON.parse(e.data);
-    if (d.type === 'history') { $msgs.innerHTML = ''; d.messages.forEach(renderMsg); scrollEnd(); }
+    if (d.type === 'history') { $msgs.innerHTML = ''; lastSender = null; d.messages.forEach(renderMsg); scrollEnd(); }
     else if (d.type === 'message') { renderMsg(d.message); scrollEnd(); }
     else if (d.type === 'agent_status') {
       const incoming = d.agents || {};
@@ -952,55 +1009,87 @@ function connect() {
 }
 
 // ═══════════ Messages ═══════════
+let lastSender = null;
+
 function renderMsg(m) {
   const el = document.createElement('div');
-  el.className = m.type === 'system' ? 'msg system' : m.target !== 'all' ? 'msg direct' : 'msg';
-  if (m.type === 'system') { el.textContent = m.content; }
-  else {
+  const isSystem = m.type === 'system';
+  const isDirect = !isSystem && m.target !== 'all';
+  const baseClass = isSystem ? 'msg system' : isDirect ? 'msg direct' : 'msg';
+
+  if (isSystem) {
+    el.className = baseClass;
+    el.textContent = m.content;
+    lastSender = null;
+  } else {
+    // Message grouping: if same sender as previous, collapse header
+    const sameSender = m.sender === lastSender;
+    if (sameSender) {
+      el.className = `${baseClass} grouped`;
+      // Also mark the previous message as group-start if it's standalone
+      const prev = $msgs.lastElementChild;
+      if (prev && prev.classList.contains('standalone')) {
+        prev.classList.remove('standalone');
+        prev.classList.add('group-start');
+      }
+    } else {
+      el.className = `${baseClass} standalone`;
+    }
+
     const ts = m.timestamp ? m.timestamp.slice(11, 19) : '';
-    const tag = m.target !== 'all' ? `<span class="msg-tag">@${esc(m.target)}</span>` : '';
+    const tag = isDirect ? `<span class="msg-tag">@${esc(m.target)}</span>` : '';
     el.innerHTML = `<div class="msg-head"><span class="msg-sender" style="color:${color(m.sender)}">${esc(m.sender)}</span>${tag}<span class="msg-time">${ts}</span></div><div class="msg-body">${esc(m.content)}</div>`;
+    lastSender = m.sender;
   }
   $msgs.appendChild(el);
 }
 
 // ═══════════ Agent Sidebar ═══════════
-function shortRole(role) {
+const ROLE_MAP = {
+  'supervisor': 'Coordinator',
+  'git-agent': 'Git Ops',
+};
+
+function shortRole(role, name) {
   if (!role) return '';
+  // Check hardcoded short names for non-phase agents
+  if (ROLE_MAP[name]) return ROLE_MAP[name];
+  // Extract phase label: "Phase N: Label — ..."
   const m = role.match(/^Phase \d+[AB]?:\s*([^—–\-\.]+)/);
-  return m ? m[1].trim() : (role.length > 30 ? role.slice(0, 30) + '...' : role);
+  return m ? m[1].trim() : (role.length > 24 ? role.slice(0, 24) + '...' : role);
 }
 
 function renderAgents() {
   $agents.innerHTML = '';
   let inCount = 0;
 
-  // Gurvinder — always first, always active
+  // Gurvinder — operator card, visually distinct
   const gCard = document.createElement('div');
-  gCard.className = 'ac';
+  gCard.className = 'ac ac-operator';
   gCard.innerHTML = `
     <div class="ac-row1">
       <span class="dot active"></span>
       <span class="ac-name" style="color:${color('gurvinder')}">gurvinder</span>
-      <div class="ac-actions">
-        <button class="abtn abtn-msg" title="Message @all">@all</button>
-      </div>
     </div>
     <div class="ac-row2">
-      <span class="ac-role">You</span>
-      <span class="ac-status st-active">online</span>
+      <span class="ac-role">Operator</span>
     </div>
   `;
-  gCard.querySelector('.abtn-msg').onclick = () => { $target.value = 'all'; $input.focus(); };
+  gCard.onclick = () => { $target.value = 'all'; $input.focus(); };
   $agents.appendChild(gCard);
   inCount++;
+
+  // Separator between operator and agents
+  const sep = document.createElement('div');
+  sep.className = 'ac-sep';
+  $agents.appendChild(sep);
 
   agentRoster.forEach(a => {
     const d = agentData[a.name] || {};
     const presence = d.presence || 'offline';
     const activity = d.activity || null;
     const inRoom = d.in_room !== undefined ? d.in_room : true;
-    const role = shortRole(a.role);
+    const role = shortRole(a.role, a.name);
     const deboarded = !inRoom;
 
     if (inRoom && presence !== 'offline') inCount++;
@@ -1008,10 +1097,14 @@ function renderAgents() {
     const card = document.createElement('div');
     card.className = deboarded ? 'ac off' : 'ac';
 
-    // Status badge
-    let stClass, stText;
+    // Status badge — only show for non-idle states (idle is the default, showing it is noise)
+    let stClass = '', stText = '';
     if (deboarded) { stClass = 'st-deboarded'; stText = 'de-boarded'; }
-    else { stClass = `st-${presence}`; stText = PRESENCE_LABELS[presence] || presence; }
+    else if (presence === 'busy') { stClass = 'st-busy'; stText = 'working'; }
+    else if (presence === 'typing') { stClass = 'st-typing'; stText = 'thinking'; }
+    else if (presence === 'session') { stClass = 'st-session'; stText = 'no claude'; }
+    else if (presence === 'offline') { stClass = 'st-offline'; stText = 'offline'; }
+    // active/idle: no badge — the green dot is enough
 
     // Action buttons — ALWAYS visible
     let btns = '';
@@ -1042,8 +1135,8 @@ function renderAgents() {
         <div class="ac-actions">${btns}</div>
       </div>
       <div class="ac-row2">
-        <span class="ac-role">${role}</span>
-        <span class="ac-status ${stClass}">${stText}</span>
+        <span class="ac-role" title="${esc(a.role || '')}">${role}</span>
+        ${stText ? `<span class="ac-status ${stClass}">${stText}</span>` : ''}
       </div>
       ${actHtml}
     `;
