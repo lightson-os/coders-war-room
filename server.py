@@ -1,7 +1,9 @@
 import asyncio
+import glob as globmod
 import json
 import re
 import subprocess
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,6 +46,102 @@ connected_clients: list[WebSocket] = []
 agent_queues: dict[str, list[dict]] = {}
 # Tracks which agents are "in" the war room (True = in, False = de-boarded)
 agent_membership: dict[str, bool] = {a["name"]: True for a in AGENTS}
+
+# Status store (manual status per agent, 30min TTL)
+agent_manual_status: dict[str, dict] = {}
+agent_last_state: dict[str, dict] = {}
+agent_owns_resolved: dict[str, list[str]] = {}
+agent_last_commit: dict[str, dict] = {}
+
+STATUS_TTL_SECONDS = 1800  # 30 minutes
+STALE_THRESHOLD_SECONDS = 300  # 5 minutes
+STALE_EXEMPT_TOOLS = {"Read", "Bash", "WebFetch", "WebSearch", "Agent"}
+
+
+# ---------------------------------------------------------------------------
+# Ownership, staleness, manual status helpers
+# ---------------------------------------------------------------------------
+def resolve_ownership():
+    """Resolve glob patterns from config.yaml owns field into filenames."""
+    for agent in AGENTS:
+        name = agent["name"]
+        patterns = agent.get("owns", [])
+        resolved = set()
+        for pattern in patterns:
+            full_pattern = str(Path(PROJECT_PATH) / pattern)
+            matches = globmod.glob(full_pattern, recursive=True)
+            for match in matches:
+                p = Path(match)
+                if p.is_file():
+                    resolved.add(p.name)
+        agent_owns_resolved[name] = sorted(resolved)
+
+
+def update_staleness(agent_name: str, tool: str, file: str) -> bool:
+    """Track how long an agent has been on the same tool+file. Returns True if stalled."""
+    now = time.time()
+    prev = agent_last_state.get(agent_name)
+    if prev and prev.get("tool") == tool and prev.get("file") == file:
+        return (now - prev["since"]) >= STALE_THRESHOLD_SECONDS and tool not in STALE_EXEMPT_TOOLS
+    else:
+        agent_last_state[agent_name] = {"tool": tool, "file": file, "since": now}
+        return False
+
+
+def get_stalled_minutes(agent_name: str) -> int:
+    prev = agent_last_state.get(agent_name)
+    if not prev:
+        return 0
+    return int((time.time() - prev["since"]) / 60)
+
+
+def get_manual_status(agent_name: str) -> dict:
+    """Get manual status respecting TTL. Blockers never auto-expire."""
+    status = agent_manual_status.get(agent_name)
+    if not status:
+        return {}
+    elapsed = time.time() - status.get("updated_at", 0)
+    if elapsed > STATUS_TTL_SECONDS:
+        result = {}
+        if status.get("blocked_by"):
+            result["blocked_by"] = status["blocked_by"]
+            result["blocked_reason"] = status.get("blocked_reason")
+        if not result:
+            agent_manual_status.pop(agent_name, None)
+        return result
+    return {k: v for k, v in status.items() if k != "updated_at"}
+
+
+def reset_manual_ttl(agent_name: str):
+    """Reset TTL timer on any agent activity."""
+    if agent_name in agent_manual_status:
+        agent_manual_status[agent_name]["updated_at"] = time.time()
+
+
+def refresh_last_commits():
+    """Get latest commit touching each agent's owned files."""
+    for agent in AGENTS:
+        name = agent["name"]
+        patterns = agent.get("owns", [])
+        if not patterns:
+            continue
+        files = []
+        for pattern in patterns:
+            full = str(Path(PROJECT_PATH) / pattern)
+            matches = globmod.glob(full, recursive=True)
+            files.extend(m for m in matches if Path(m).is_file())
+        if not files:
+            continue
+        try:
+            result = subprocess.run(
+                ["git", "-C", PROJECT_PATH, "log", "-1", "--format=%h %s", "--"] + files,
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                parts = result.stdout.strip().split(" ", 1)
+                agent_last_commit[name] = {"hash": parts[0], "message": parts[1] if len(parts) > 1 else ""}
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -321,14 +419,60 @@ async def flush_queues_loop():
 
 
 async def agent_status_loop():
-    """Background: push rich agent presence to web clients every 2s."""
+    """Background: push rich agent status (config + auto + manual) every 2s."""
+    commit_counter = 0
     while True:
         await asyncio.sleep(2)
+        commit_counter += 1
+        if commit_counter >= 15:  # Refresh git commits every 30s
+            commit_counter = 0
+            refresh_last_commits()
+
         agents_data = {}
         for a in AGENTS:
-            activity = get_agent_activity(a["tmux_session"])
-            activity["in_room"] = agent_membership.get(a["name"], False)
-            agents_data[a["name"]] = activity
+            name = a["name"]
+            session = a["tmux_session"]
+            activity = get_agent_activity(session)
+
+            # Parse tool and file from activity string
+            tool, file = None, None
+            act_str = activity.get("activity") or ""
+            if " \u2192 " in act_str:  # " → "
+                parts = act_str.split(" \u2192 ", 1)
+                tool = parts[0].strip()
+                file = parts[1].split(":")[0].strip() if len(parts) > 1 else None
+
+            # Staleness detection
+            stalled = False
+            stalled_minutes = 0
+            if tool and file and activity["presence"] == "busy":
+                stalled = update_staleness(name, tool, file)
+                stalled_minutes = get_stalled_minutes(name)
+                reset_manual_ttl(name)
+            elif activity["presence"] == "busy":
+                agent_last_state.pop(name, None)
+                reset_manual_ttl(name)
+
+            manual = get_manual_status(name)
+            owns = agent_owns_resolved.get(name, [])
+            last_commit = agent_last_commit.get(name)
+
+            agents_data[name] = {
+                "presence": "blocked" if manual.get("blocked_by") else ("stalled" if stalled else activity["presence"]),
+                "activity": activity.get("activity"),
+                "in_room": agent_membership.get(name, False),
+                "dynamic": a.get("dynamic", False),
+                "task": manual.get("task"),
+                "progress": manual.get("progress"),
+                "eta": manual.get("eta"),
+                "blocked_by": manual.get("blocked_by"),
+                "blocked_reason": manual.get("blocked_reason"),
+                "stalled": stalled,
+                "stalled_minutes": stalled_minutes,
+                "owns": owns,
+                "last_commit": last_commit,
+            }
+
         data = json.dumps({"type": "agent_status", "agents": agents_data})
         for client in connected_clients[:]:
             try:
@@ -406,6 +550,8 @@ async def broadcast_ws(data: dict, exclude: Optional[WebSocket] = None):
 async def lifespan(app: FastAPI):
     await init_db()
     reconcile_tmux_sessions()  # Adopt orphaned sessions on boot
+    resolve_ownership()
+    refresh_last_commits()
     task1 = asyncio.create_task(flush_queues_loop())
     task2 = asyncio.create_task(agent_status_loop())
     yield
