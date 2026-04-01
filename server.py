@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -338,6 +339,52 @@ async def agent_status_loop():
                     connected_clients.remove(client)
 
 
+def reconcile_tmux_sessions():
+    """On boot, discover orphaned warroom-* tmux sessions and adopt them."""
+    try:
+        result = subprocess.run(
+            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode != 0:
+            return
+
+        for line in result.stdout.strip().split("\n"):
+            session_name = line.strip()
+            if not session_name.startswith("warroom-"):
+                continue
+            agent_name = session_name[len("warroom-"):]
+            if agent_name in AGENT_NAMES:
+                continue
+
+            # Get the pane's working directory
+            pane_dir = PROJECT_PATH
+            try:
+                dir_result = subprocess.run(
+                    ["tmux", "display-message", "-t", session_name, "-p", "#{pane_current_path}"],
+                    capture_output=True, text=True, timeout=2,
+                )
+                if dir_result.returncode == 0 and dir_result.stdout.strip():
+                    pane_dir = dir_result.stdout.strip()
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                pass
+
+            agent_entry = {
+                "name": agent_name,
+                "role": "Dynamic agent (recovered)",
+                "tmux_session": session_name,
+                "dynamic": True,
+            }
+            AGENTS.append(agent_entry)
+            AGENT_NAMES.add(agent_name)
+            AGENT_SESSIONS[agent_name] = session_name
+            AGENT_DIRS[agent_name] = pane_dir
+            agent_membership[agent_name] = True
+
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+
 # ---------------------------------------------------------------------------
 # WebSocket broadcast helper
 # ---------------------------------------------------------------------------
@@ -359,6 +406,7 @@ async def broadcast_ws(data: dict, exclude: Optional[WebSocket] = None):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    reconcile_tmux_sessions()  # Adopt orphaned sessions on boot
     task1 = asyncio.create_task(flush_queues_loop())
     task2 = asyncio.create_task(agent_status_loop())
     yield
@@ -374,6 +422,20 @@ class MessageCreate(BaseModel):
     target: str = "all"
     content: str
     type: str = "message"
+
+
+class AgentCreate(BaseModel):
+    name: str
+    directory: str
+    role: str
+    initial_prompt: str = ""
+    model: str = "opus"
+    skip_permissions: bool = True
+
+
+NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9\-]{0,18}[a-z0-9]$")
+VALID_MODELS = {"opus", "sonnet", "haiku"}
+STARTUP_MD = Path(__file__).parent / "startup.md"
 
 
 @app.post("/api/messages")
@@ -468,6 +530,163 @@ async def agent_reboard(agent_name: str):
         await broadcast_ws({"type": "message", "message": saved})
     await broadcast_ws({"type": "membership", "agent": agent_name, "in_room": True})
     return {"status": "reboarded", "agent": agent_name}
+
+
+@app.post("/api/agents/create")
+async def create_agent(req: AgentCreate):
+    # Validate name format
+    if not NAME_PATTERN.match(req.name):
+        return JSONResponse(
+            {"error": "Name must be 2-20 chars, lowercase alphanumeric + hyphens"},
+            status_code=400,
+        )
+
+    # Validate uniqueness
+    if req.name in AGENT_NAMES:
+        return JSONResponse(
+            {"error": f"Agent '{req.name}' already exists"},
+            status_code=400,
+        )
+
+    # Validate directory
+    dir_path = Path(req.directory)
+    if not dir_path.is_dir():
+        return JSONResponse(
+            {"error": f"Directory not found: {req.directory}"},
+            status_code=400,
+        )
+
+    # Validate model
+    if req.model not in VALID_MODELS:
+        return JSONResponse(
+            {"error": "Invalid model"},
+            status_code=400,
+        )
+
+    session = f"warroom-{req.name}"
+    agent_dir = str(dir_path.resolve())
+
+    try:
+        # Create tmux session
+        subprocess.run(
+            ["tmux", "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "-c", agent_dir],
+            check=True,
+            capture_output=True,
+            timeout=5,
+        )
+
+        # Configure tmux session
+        subprocess.run(
+            ["tmux", "set-option", "-t", session, "mouse", "on"],
+            capture_output=True,
+            timeout=2,
+        )
+        subprocess.run(
+            ["tmux", "set-option", "-t", session, "history-limit", "10000"],
+            capture_output=True,
+            timeout=2,
+        )
+        subprocess.run(
+            ["tmux", "rename-window", "-t", session, req.name],
+            capture_output=True,
+            timeout=2,
+        )
+
+        # Set env var so Claude Code knows its agent name
+        subprocess.run(
+            ["tmux", "send-keys", "-t", session, f"export WARROOM_AGENT_NAME={req.name}", "Enter"],
+            capture_output=True,
+            timeout=2,
+        )
+        await asyncio.sleep(0.5)
+
+        # Start Claude Code
+        model_flag = f"--model {req.model}" if req.model != "opus" else ""
+        perms_flag = "--dangerously-skip-permissions" if req.skip_permissions else ""
+        cmd = f"cd {agent_dir} && claude {model_flag} {perms_flag}".strip()
+        cmd = " ".join(cmd.split())
+        subprocess.run(
+            ["tmux", "send-keys", "-t", session, cmd, "Enter"],
+            capture_output=True,
+            timeout=2,
+        )
+
+        # Wait for Claude Code to be ready (up to 30s)
+        warning = None
+        ready = False
+        for _ in range(15):
+            await asyncio.sleep(2)
+            if check_agent_ready(session):
+                ready = True
+                break
+        if not ready:
+            warning = "Agent may still be starting"
+
+        # Inject startup prompt
+        if req.initial_prompt.strip():
+            injection = f"Read ~/coders-war-room/startup.md then follow these instructions:\n\n{req.initial_prompt}"
+        else:
+            injection = "Read ~/coders-war-room/startup.md — you are now in the War Room. Acknowledge with your name and role, then wait for instructions."
+        send_to_tmux(session, injection)
+
+        # Add to in-memory roster
+        agent_entry = {
+            "name": req.name,
+            "role": req.role,
+            "tmux_session": session,
+            "dynamic": True,
+        }
+        AGENTS.append(agent_entry)
+        AGENT_NAMES.add(req.name)
+        AGENT_SESSIONS[req.name] = session
+        AGENT_DIRS[req.name] = agent_dir
+        agent_membership[req.name] = True
+
+        # Announce creation
+        saved = await save_message(
+            "system", "all", f"{req.name} has joined the war room", "system"
+        )
+        await broadcast_ws({"type": "message", "message": saved})
+
+        activity = get_agent_activity(session)
+        activity["in_room"] = True
+        await broadcast_ws({
+            "type": "agent_created",
+            "agent": {
+                "name": req.name,
+                "role": req.role,
+                "presence": activity["presence"],
+                "activity": activity["activity"],
+                "in_room": True,
+                "dynamic": True,
+            },
+        })
+
+        result = {
+            "status": "created",
+            "agent": {
+                "name": req.name,
+                "role": req.role,
+                "tmux_session": session,
+                "presence": activity["presence"],
+                "in_room": True,
+                "dynamic": True,
+            },
+        }
+        if warning:
+            result["warning"] = warning
+        return result
+
+    except subprocess.CalledProcessError as e:
+        # Clean up on failure
+        subprocess.run(
+            ["tmux", "kill-session", "-t", session],
+            capture_output=True,
+        )
+        return JSONResponse(
+            {"error": f"Failed to create tmux session: {e}"},
+            status_code=500,
+        )
 
 
 @app.post("/api/agents/{agent_name}/attach")
