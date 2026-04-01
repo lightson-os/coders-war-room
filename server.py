@@ -112,7 +112,7 @@ def check_agent_ready(session_name: str) -> bool:
     """Check if Claude Code is at its input prompt by inspecting the tmux pane."""
     try:
         result = subprocess.run(
-            ["tmux", "capture-pane", "-t", session_name, "-p", "-l", "5"],
+            ["tmux", "capture-pane", "-t", session_name, "-p", "-S", "-5"],
             capture_output=True,
             text=True,
             timeout=2,

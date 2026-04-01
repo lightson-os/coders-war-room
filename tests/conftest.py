@@ -15,6 +15,8 @@ def _init_db(tmp_path, monkeypatch):
 
     test_db = tmp_path / "test_warroom.db"
     monkeypatch.setattr(server, "DB_PATH", test_db)
+    monkeypatch.setattr(server, "agent_queues", {})
+    monkeypatch.setattr(server, "connected_clients", [])
     loop = asyncio.new_event_loop()
     loop.run_until_complete(server.init_db())
     loop.close()
