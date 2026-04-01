@@ -17,6 +17,7 @@ def _init_db(tmp_path, monkeypatch):
     monkeypatch.setattr(server, "DB_PATH", test_db)
     monkeypatch.setattr(server, "agent_queues", {})
     monkeypatch.setattr(server, "connected_clients", [])
+    monkeypatch.setattr(server, "agent_membership", {a["name"]: True for a in server.AGENTS})
     loop = asyncio.new_event_loop()
     loop.run_until_complete(server.init_db())
     loop.close()

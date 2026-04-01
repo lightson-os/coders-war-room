@@ -9,7 +9,7 @@ from typing import Optional
 import aiosqlite
 import yaml
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
 # ---------------------------------------------------------------------------
@@ -27,13 +27,15 @@ AGENT_SESSIONS = {a["name"]: a["tmux_session"] for a in AGENTS}
 
 MAX_TMUX_MSG_LEN = 500
 
+# Braille spinner characters Claude Code uses when working
+SPINNER_CHARS = set("⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")
+
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
 connected_clients: list[WebSocket] = []
 agent_queues: dict[str, list[dict]] = {}
 # Tracks which agents are "in" the war room (True = in, False = de-boarded)
-# All agents start as "in" — de-boarding removes them from dispatch without killing their session
 agent_membership: dict[str, bool] = {a["name"]: True for a in AGENTS}
 
 
@@ -97,7 +99,7 @@ async def get_message_by_id(msg_id: int) -> Optional[dict]:
 
 
 # ---------------------------------------------------------------------------
-# tmux dispatch
+# tmux helpers
 # ---------------------------------------------------------------------------
 def tmux_session_exists(session_name: str) -> bool:
     try:
@@ -111,47 +113,99 @@ def tmux_session_exists(session_name: str) -> bool:
         return False
 
 
-def check_agent_ready(session_name: str) -> bool:
-    """Check if Claude Code is at its input prompt by inspecting the tmux pane.
-
-    Claude Code's TUI shows these indicators when idle/waiting for input:
-      - '❯' (U+276F) — the input prompt character
-      - '>' (ASCII) — fallback for older versions
-    When busy, the pane shows spinner text, tool output, or thinking indicators.
-    """
+def capture_tmux_lines(session_name: str, n: int = 10) -> Optional[str]:
+    """Capture the last n lines from a tmux pane. Returns None if session doesn't exist."""
     try:
         result = subprocess.run(
-            ["tmux", "capture-pane", "-t", session_name, "-p", "-S", "-15"],
+            ["tmux", "capture-pane", "-t", session_name, "-p", "-S", f"-{n}"],
             capture_output=True,
             text=True,
             timeout=2,
         )
         if result.returncode != 0:
-            return False
-        content = result.stdout
-        # Look for Claude Code's idle prompt character anywhere in recent output
-        # The ❯ character appears on its own line when waiting for input
-        if "\u276f" in content:  # ❯
-            # But also check we're NOT in the middle of output —
-            # if there's a spinner (⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏) or "Thinking" indicator, agent is busy
-            busy_indicators = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "Thinking"]
-            last_lines = content.strip().split("\n")[-5:]
-            for line in last_lines:
-                for indicator in busy_indicators:
-                    if indicator in line:
-                        return False
-            return True
-        # Fallback: plain > prompt
-        lines = content.strip().split("\n")
-        for line in reversed(lines[-5:]):
-            stripped = line.strip()
-            if stripped == ">" or stripped.endswith("> "):
-                return True
-        return False
+            return None
+        return result.stdout
     except (subprocess.TimeoutExpired, FileNotFoundError):
+        return None
+
+
+def _has_busy_indicators(lines: list[str]) -> tuple[bool, Optional[str]]:
+    """Check last few lines for Claude Code busy indicators.
+    Returns (is_busy, activity_description_or_None).
+    """
+    for line in reversed(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        # Check for spinner char at start of line → busy with activity
+        if stripped[0] in SPINNER_CHARS:
+            activity = stripped[1:].strip().rstrip(".")
+            if activity:
+                return True, activity
+            return True, "Working..."
+        # Check for "Thinking" anywhere in recent lines
+        if "Thinking" in stripped:
+            return True, "Thinking..."
+    return False, None
+
+
+# ---------------------------------------------------------------------------
+# Agent presence & readiness
+# ---------------------------------------------------------------------------
+def check_agent_ready(session_name: str) -> bool:
+    """Check if Claude Code is idle (can receive messages).
+
+    FLIPPED LOGIC: Instead of looking for a specific prompt character (which varies),
+    we check if busy indicators are ABSENT. If no spinners and no "Thinking" text
+    in the last 5 lines, the agent is ready.
+    """
+    content = capture_tmux_lines(session_name, 10)
+    if content is None:
         return False
+    last_lines = content.strip().split("\n")[-5:]
+    is_busy, _ = _has_busy_indicators(last_lines)
+    return not is_busy
 
 
+def get_agent_activity(session_name: str) -> dict:
+    """Returns rich presence info: {"presence": str, "activity": str|None}.
+
+    Presence values:
+      - "active"  — Claude Code idle, waiting for input
+      - "busy"    — Claude Code running a tool or processing
+      - "typing"  — Claude Code thinking/composing
+      - "session" — tmux session exists but no Claude Code detected
+      - "offline" — no tmux session
+    """
+    if not tmux_session_exists(session_name):
+        return {"presence": "offline", "activity": None}
+
+    content = capture_tmux_lines(session_name, 15)
+    if content is None:
+        return {"presence": "session", "activity": None}
+
+    # Check if Claude Code is running at all
+    has_claude = "Claude Code" in content or any(
+        c in content for c in ["\u276f", "\u23f5", "\u2770", ">"]  # ❯ ⏵ ❰ >
+    )
+    if not has_claude:
+        return {"presence": "session", "activity": None}
+
+    # Check for busy indicators
+    last_lines = content.strip().split("\n")[-5:]
+    is_busy, activity = _has_busy_indicators(last_lines)
+
+    if is_busy:
+        if activity and "Thinking" in activity:
+            return {"presence": "typing", "activity": activity}
+        return {"presence": "busy", "activity": activity}
+
+    return {"presence": "active", "activity": None}
+
+
+# ---------------------------------------------------------------------------
+# tmux dispatch
+# ---------------------------------------------------------------------------
 def format_message_for_tmux(msg: dict) -> str:
     sender = msg["sender"]
     target = msg["target"]
@@ -214,7 +268,6 @@ async def dispatch_to_agents(msg: dict):
         if name == msg["sender"]:
             continue
 
-        # Skip de-boarded agents (they left the conversation but session is alive)
         if not agent_membership.get(name, False):
             continue
 
@@ -246,7 +299,7 @@ async def flush_queues_loop():
             if name not in agent_queues or not agent_queues[name]:
                 continue
             if not agent_membership.get(name, False):
-                agent_queues.pop(name, None)  # discard queued messages for de-boarded agents
+                agent_queues.pop(name, None)
                 continue
             if not tmux_session_exists(session):
                 continue
@@ -261,39 +314,16 @@ async def flush_queues_loop():
             send_to_tmux(session, text)
 
 
-def get_agent_presence(session_name: str) -> str:
-    """Return agent presence: 'active' (Claude Code idle), 'busy' (Claude Code working), 'session' (tmux exists but no Claude), 'offline'."""
-    if not tmux_session_exists(session_name):
-        return "offline"
-    try:
-        result = subprocess.run(
-            ["tmux", "capture-pane", "-t", session_name, "-p", "-S", "-15"],
-            capture_output=True, text=True, timeout=2,
-        )
-        if result.returncode != 0:
-            return "session"
-        content = result.stdout
-        # Check if Claude Code is running at all (look for its UI elements)
-        if "\u276f" not in content and "Claude Code" not in content:
-            return "session"  # tmux exists but no Claude Code
-        # Check if busy
-        busy_indicators = ["\u280b", "\u2819", "\u2839", "\u2838", "\u283c", "\u2834", "\u2826", "\u2827", "\u2807", "\u280f", "Thinking"]
-        last_lines = content.strip().split("\n")[-5:]
-        for line in last_lines:
-            for indicator in busy_indicators:
-                if indicator in line:
-                    return "busy"
-        return "active"
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        return "session"
-
-
 async def agent_status_loop():
-    """Background: push agent presence to web clients every 5s."""
+    """Background: push rich agent presence to web clients every 2s."""
     while True:
-        await asyncio.sleep(5)
-        status = {a["name"]: get_agent_presence(a["tmux_session"]) for a in AGENTS}
-        data = json.dumps({"type": "agent_status", "status": status})
+        await asyncio.sleep(2)
+        agents_data = {}
+        for a in AGENTS:
+            activity = get_agent_activity(a["tmux_session"])
+            activity["in_room"] = agent_membership.get(a["name"], False)
+            agents_data[a["name"]] = activity
+        data = json.dumps({"type": "agent_status", "agents": agents_data})
         for client in connected_clients[:]:
             try:
                 await client.send_text(data)
@@ -368,38 +398,54 @@ async def list_agents():
             "name": a["name"],
             "role": a["role"],
             "online": tmux_session_exists(a["tmux_session"]),
-            "presence": get_agent_presence(a["tmux_session"]),
+            "presence": get_agent_activity(a["tmux_session"])["presence"],
+            "activity": get_agent_activity(a["tmux_session"])["activity"],
             "in_room": agent_membership.get(a["name"], False),
         }
         for a in AGENTS
     ]
 
 
-@app.post("/api/agents/{agent_name}/leave")
-async def agent_leave(agent_name: str):
-    """De-board an agent — stops message delivery but keeps their session alive."""
+@app.post("/api/agents/{agent_name}/deboard")
+async def agent_deboard(agent_name: str):
+    """De-board: stop message delivery, keep session alive."""
     if agent_name not in AGENT_NAMES:
-        return {"error": f"Unknown agent: {agent_name}"}, 404
+        return JSONResponse({"error": f"Unknown agent: {agent_name}"}, status_code=404)
     agent_membership[agent_name] = False
     agent_queues.pop(agent_name, None)
-    saved = await save_message("system", "all", f"{agent_name} has left the war room", "system")
+    saved = await save_message(
+        "system", "all",
+        f"{agent_name} has been de-boarded from the war room (session still active)",
+        "system",
+    )
     await broadcast_ws({"type": "message", "message": saved})
     await broadcast_ws({"type": "membership", "agent": agent_name, "in_room": False})
-    return {"status": "left", "agent": agent_name}
+    return {"status": "deboarded", "agent": agent_name}
+
+
+@app.post("/api/agents/{agent_name}/reboard")
+async def agent_reboard(agent_name: str):
+    """Re-board: resume message delivery."""
+    if agent_name not in AGENT_NAMES:
+        return JSONResponse({"error": f"Unknown agent: {agent_name}"}, status_code=404)
+    was_in = agent_membership.get(agent_name, False)
+    agent_membership[agent_name] = True
+    if not was_in:
+        saved = await save_message("system", "all", f"{agent_name} has re-joined the war room", "system")
+        await broadcast_ws({"type": "message", "message": saved})
+    await broadcast_ws({"type": "membership", "agent": agent_name, "in_room": True})
+    return {"status": "reboarded", "agent": agent_name}
+
+
+# Keep old endpoints as aliases for backwards compat
+@app.post("/api/agents/{agent_name}/leave")
+async def agent_leave(agent_name: str):
+    return await agent_deboard(agent_name)
 
 
 @app.post("/api/agents/{agent_name}/join")
 async def agent_join(agent_name: str):
-    """Re-board an agent — resumes message delivery."""
-    if agent_name not in AGENT_NAMES:
-        return {"error": f"Unknown agent: {agent_name}"}, 404
-    was_in = agent_membership.get(agent_name, False)
-    agent_membership[agent_name] = True
-    if not was_in:
-        saved = await save_message("system", "all", f"{agent_name} has joined the war room", "system")
-        await broadcast_ws({"type": "message", "message": saved})
-    await broadcast_ws({"type": "membership", "agent": agent_name, "in_room": True})
-    return {"status": "joined", "agent": agent_name}
+    return await agent_reboard(agent_name)
 
 
 @app.websocket("/ws")
@@ -410,8 +456,13 @@ async def websocket_endpoint(ws: WebSocket):
         messages = await get_messages(200)
         await ws.send_text(json.dumps({"type": "history", "messages": messages}))
 
-        status = {a["name"]: get_agent_presence(a["tmux_session"]) for a in AGENTS}
-        await ws.send_text(json.dumps({"type": "agent_status", "status": status}))
+        # Send initial agent status with activity
+        agents_data = {}
+        for a in AGENTS:
+            activity = get_agent_activity(a["tmux_session"])
+            activity["in_room"] = agent_membership.get(a["name"], False)
+            agents_data[a["name"]] = activity
+        await ws.send_text(json.dumps({"type": "agent_status", "agents": agents_data}))
 
         while True:
             raw = await ws.receive_text()

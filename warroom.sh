@@ -92,30 +92,30 @@ except Exception as e:
 "
 }
 
-leave_room() {
+deboard_agent() {
     local agent="${1:-$WARROOM_AGENT}"
     local resp
-    resp=$(curl -s -w "\n%{http_code}" -X POST "$WARROOM_SERVER/api/agents/$agent/leave")
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$WARROOM_SERVER/api/agents/$agent/deboard")
     local code
     code=$(echo "$resp" | tail -1)
     if [ "$code" = "200" ]; then
-        echo "Left the war room. Session still alive — you can keep working."
-        echo "Rejoin anytime: warroom.sh rejoin"
+        echo "De-boarded from the war room. Session still alive — keep working."
+        echo "Re-board anytime: warroom.sh reboard"
     else
-        echo "Error leaving: $resp"
+        echo "Error: $resp"
     fi
 }
 
-rejoin_room() {
+reboard_agent() {
     local agent="${1:-$WARROOM_AGENT}"
     local resp
-    resp=$(curl -s -w "\n%{http_code}" -X POST "$WARROOM_SERVER/api/agents/$agent/join")
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$WARROOM_SERVER/api/agents/$agent/reboard")
     local code
     code=$(echo "$resp" | tail -1)
     if [ "$code" = "200" ]; then
-        echo "Rejoined the war room. Messages will be delivered again."
+        echo "Re-boarded to the war room. Messages will be delivered again."
     else
-        echo "Error rejoining: $resp"
+        echo "Error: $resp"
     fi
 }
 
@@ -132,13 +132,13 @@ case "$1" in
         shift
         show_mentions "$@"
         ;;
-    leave)
+    deboard)
         shift
-        leave_room "$@"
+        deboard_agent "$@"
         ;;
-    rejoin)
+    reboard)
         shift
-        rejoin_room "$@"
+        reboard_agent "$@"
         ;;
     *)
         echo "Coder's War Room — Agent CLI"
@@ -147,8 +147,8 @@ case "$1" in
         echo "  warroom.sh post [--to agent] message   Send a message"
         echo "  warroom.sh history [--count N]          Show all recent messages"
         echo "  warroom.sh mentions [--count N]         Show messages for me + @all"
-        echo "  warroom.sh leave                        Leave war room (keep working)"
-        echo "  warroom.sh rejoin                       Rejoin the war room"
+        echo "  warroom.sh deboard [agent]               Leave war room (keep working)"
+        echo "  warroom.sh reboard [agent]               Rejoin the war room"
         echo ""
         echo "Agent identity: $WARROOM_AGENT"
         echo "Server: $WARROOM_SERVER"

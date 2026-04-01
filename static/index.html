@@ -3,234 +3,431 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coder's War Room</title>
+<title>War Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg-deep: #0a0c10;
+    --bg-panel: #0f1218;
+    --bg-card: #141920;
+    --bg-hover: #1a2030;
+    --border: #1e2736;
+    --border-bright: #2a3548;
+    --text-primary: #d4dae4;
+    --text-secondary: #6b7a8d;
+    --text-dim: #3d4a5c;
+    --accent-green: #00e676;
+    --accent-yellow: #ffd740;
+    --accent-orange: #ff9100;
+    --accent-red: #ff5252;
+    --accent-blue: #448aff;
+    --accent-purple: #b388ff;
+    --accent-pink: #ff80ab;
+    --accent-cyan: #18ffff;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-    background: #0d1117;
-    color: #c9d1d9;
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
     height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
+  /* ═══════════════ HEADER ═══════════════ */
   header {
-    background: #161b22;
-    border-bottom: 1px solid #30363d;
-    padding: 12px 20px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
   }
 
-  header h1 {
-    font-size: 16px;
-    font-weight: 600;
-    color: #58a6ff;
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
-  .connection-status {
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 12px;
-    background: #1a1e24;
+  .header-logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent-green);
+    text-shadow: 0 0 20px rgba(0,230,118,0.15);
   }
 
-  .connection-status.connected { color: #3fb950; }
-  .connection-status.disconnected { color: #f85149; }
+  .header-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--border-bright);
+  }
 
-  .main-layout {
+  .header-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .conn-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 4px 12px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .conn-badge.on {
+    color: var(--accent-green);
+    background: rgba(0,230,118,0.08);
+    border: 1px solid rgba(0,230,118,0.2);
+  }
+
+  .conn-badge.off {
+    color: var(--accent-red);
+    background: rgba(255,82,82,0.08);
+    border: 1px solid rgba(255,82,82,0.2);
+    animation: pulse-red 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* ═══════════════ MAIN LAYOUT ═══════════════ */
+  .main {
     display: flex;
     flex: 1;
     overflow: hidden;
   }
 
+  /* ═══════════════ SIDEBAR ═══════════════ */
   .sidebar {
-    width: 220px;
-    background: #161b22;
-    border-right: 1px solid #30363d;
-    padding: 16px;
-    overflow-y: auto;
+    width: 260px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
   }
 
-  .sidebar h2 {
-    font-size: 11px;
+  .sidebar-header {
+    padding: 14px 16px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #8b949e;
-    margin-bottom: 12px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
   }
 
-  .agent-item {
+  .agent-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .agent-card {
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+
+  .agent-card:hover { background: var(--bg-hover); }
+
+  .agent-card.deboarded {
+    opacity: 0.35;
+  }
+
+  .agent-card-top {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-bottom: 2px;
-    font-size: 13px;
+    gap: 10px;
   }
 
-  .agent-item:hover { background: #1f2937; }
-
-  .agent-dot {
+  .presence-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
+    transition: all 0.3s;
   }
 
-  .agent-dot.active { background: #3fb950; box-shadow: 0 0 4px #3fb95066; }
-  .agent-dot.busy { background: #d29922; box-shadow: 0 0 4px #d2992266; }
-  .agent-dot.session { background: #484f58; }
-  .agent-dot.offline { background: #f85149; opacity: 0.5; }
+  .presence-dot.active {
+    background: var(--accent-green);
+    box-shadow: 0 0 6px rgba(0,230,118,0.4);
+  }
 
-  .chat-container {
+  .presence-dot.busy {
+    background: var(--accent-yellow);
+    box-shadow: 0 0 6px rgba(255,215,64,0.3);
+    animation: spin-busy 1.5s linear infinite;
+  }
+
+  .presence-dot.typing {
+    background: var(--accent-cyan);
+    box-shadow: 0 0 6px rgba(24,255,255,0.3);
+    animation: pulse-type 1s ease-in-out infinite;
+  }
+
+  .presence-dot.session {
+    background: var(--text-dim);
+  }
+
+  .presence-dot.offline {
+    background: var(--accent-red);
+    opacity: 0.4;
+  }
+
+  @keyframes spin-busy {
+    0% { box-shadow: 0 0 4px rgba(255,215,64,0.2); }
+    50% { box-shadow: 0 0 8px rgba(255,215,64,0.5); }
+    100% { box-shadow: 0 0 4px rgba(255,215,64,0.2); }
+  }
+
+  @keyframes pulse-type {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+  }
+
+  .agent-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .agent-board-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+  }
+
+  .agent-card:hover .agent-board-btn { opacity: 1; }
+
+  .agent-board-btn:hover {
+    color: var(--accent-red);
+    border-color: var(--accent-red);
+  }
+
+  .agent-board-btn.reboard:hover {
+    color: var(--accent-green);
+    border-color: var(--accent-green);
+  }
+
+  .agent-meta {
+    margin-top: 4px;
+    padding-left: 18px;
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .agent-role {
+    color: var(--text-secondary);
+  }
+
+  .agent-activity {
+    color: var(--accent-yellow);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .agent-activity.typing { color: var(--accent-cyan); }
+
+  /* ═══════════════ CHAT ═══════════════ */
+  .chat {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    background: var(--bg-deep);
   }
 
   .messages {
     flex: 1;
     overflow-y: auto;
-    padding: 16px 20px;
+    padding: 16px 24px;
   }
 
-  .message {
-    margin-bottom: 12px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    background: #161b22;
-    border-left: 3px solid #30363d;
+  .msg {
+    margin-bottom: 10px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: var(--bg-card);
+    border-left: 3px solid var(--border);
+    animation: msg-in 0.2s ease-out;
   }
 
-  .message.direct {
-    background: #1c2333;
-    border-left-color: #f0883e;
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
-  .message.system {
+  .msg.direct {
+    background: rgba(255,145,0,0.05);
+    border-left-color: var(--accent-orange);
+  }
+
+  .msg.system {
     background: transparent;
     border-left: none;
-    color: #8b949e;
+    color: var(--text-dim);
     font-style: italic;
-    font-size: 12px;
-    padding: 4px 12px;
+    font-size: 11px;
+    padding: 3px 14px;
+    animation: none;
   }
 
-  .message-header {
+  .msg-head {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
 
-  .message-sender {
+  .msg-sender {
+    font-family: 'JetBrains Mono', monospace;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 12px;
   }
 
-  .message-target {
-    font-size: 11px;
-    color: #f0883e;
-    background: #f0883e22;
+  .msg-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent-orange);
+    background: rgba(255,145,0,0.1);
     padding: 1px 6px;
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
-  .message-time {
-    font-size: 11px;
-    color: #484f58;
+  .msg-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
   }
 
-  .message-content {
+  .msg-body {
     font-size: 13px;
-    line-height: 1.5;
+    line-height: 1.55;
     white-space: pre-wrap;
     word-break: break-word;
+    color: var(--text-primary);
   }
 
-  .input-area {
-    background: #161b22;
-    border-top: 1px solid #30363d;
+  /* ═══════════════ INPUT ═══════════════ */
+  .input-bar {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
     padding: 12px 20px;
     display: flex;
     gap: 10px;
     align-items: flex-end;
+    flex-shrink: 0;
   }
 
-  .target-selector {
-    background: #0d1117;
-    border: 1px solid #30363d;
-    color: #c9d1d9;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-family: inherit;
-    font-size: 13px;
+  .target-sel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 8px 10px;
+    border-radius: 4px;
     cursor: pointer;
   }
 
-  .target-selector:focus { border-color: #58a6ff; outline: none; }
+  .target-sel:focus { border-color: var(--accent-blue); outline: none; }
 
-  .message-input {
+  .msg-input {
     flex: 1;
-    background: #0d1117;
-    border: 1px solid #30363d;
-    color: #c9d1d9;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-family: inherit;
+    font-family: 'DM Sans', sans-serif;
     font-size: 13px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 8px 14px;
+    border-radius: 4px;
     resize: none;
     min-height: 38px;
     max-height: 120px;
   }
 
-  .message-input:focus { border-color: #58a6ff; outline: none; }
+  .msg-input:focus { border-color: var(--accent-blue); outline: none; }
+  .msg-input::placeholder { color: var(--text-dim); }
 
   .send-btn {
-    background: #238636;
-    color: #fff;
-    border: none;
-    padding: 8px 20px;
-    border-radius: 6px;
-    font-family: inherit;
-    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
     font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background: var(--accent-green);
+    color: var(--bg-deep);
+    border: none;
+    padding: 9px 20px;
+    border-radius: 4px;
     cursor: pointer;
-    white-space: nowrap;
+    transition: all 0.15s;
   }
 
-  .send-btn:hover { background: #2ea043; }
-  .send-btn:disabled { background: #21262d; color: #484f58; cursor: default; }
+  .send-btn:hover { box-shadow: 0 0 12px rgba(0,230,118,0.3); }
+  .send-btn:disabled { background: var(--border); color: var(--text-dim); box-shadow: none; cursor: default; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>CODER'S WAR ROOM</h1>
-  <span id="connStatus" class="connection-status disconnected">disconnected</span>
+  <div class="header-left">
+    <span class="header-logo">War Room</span>
+    <span class="header-divider"></span>
+    <span class="header-subtitle">North Star Daemon</span>
+  </div>
+  <span id="connBadge" class="conn-badge off">offline</span>
 </header>
 
-<div class="main-layout">
+<div class="main">
   <aside class="sidebar">
-    <h2>Agents</h2>
-    <div id="agentList"></div>
+    <div class="sidebar-header">Agents</div>
+    <div id="agentList" class="agent-list"></div>
   </aside>
 
-  <div class="chat-container">
+  <div class="chat">
     <div id="messages" class="messages"></div>
-
-    <div class="input-area">
-      <select id="targetSelect" class="target-selector">
-        <option value="all">@all</option>
-      </select>
-      <textarea id="msgInput" class="message-input" placeholder="Type a message..." rows="1"></textarea>
+    <div class="input-bar">
+      <select id="targetSel" class="target-sel"><option value="all">@all</option></select>
+      <textarea id="msgInput" class="msg-input" placeholder="Message the war room..." rows="1"></textarea>
       <button id="sendBtn" class="send-btn" disabled>Send</button>
     </div>
   </div>
@@ -238,223 +435,235 @@
 
 <script>
 const COLORS = {
-  'gurvinder':  '#f0883e',
-  'supervisor': '#bc8cff',
-  'phase-1':    '#58a6ff',
-  'phase-2':    '#3fb950',
-  'phase-3':    '#f778ba',
-  'phase-4':    '#79c0ff',
-  'phase-5':    '#d2a8ff',
-  'phase-6':    '#7ee787',
-  'git-agent':  '#ffa657',
+  'gurvinder':  '#ff9100',
+  'supervisor': '#b388ff',
+  'phase-1':    '#448aff',
+  'phase-2':    '#00e676',
+  'phase-3':    '#ff80ab',
+  'phase-4':    '#18ffff',
+  'phase-5':    '#ea80fc',
+  'phase-6':    '#69f0ae',
+  'git-agent':  '#ffd740',
 };
 
-function getColor(name) {
-  return COLORS[name] || '#8b949e';
-}
+const color = n => COLORS[n] || '#6b7a8d';
+const esc = t => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
 
 let ws = null;
-let agentStatus = {};
-let agentMembership = {};  // name -> true/false (in room or not)
-let agentRoster = [];
+let agentData = {};      // name -> {presence, activity, in_room}
+let agentRoster = [];    // from /api/agents
 
-const messagesEl = document.getElementById('messages');
-const msgInput = document.getElementById('msgInput');
-const sendBtn = document.getElementById('sendBtn');
-const targetSelect = document.getElementById('targetSelect');
-const connStatus = document.getElementById('connStatus');
-const agentList = document.getElementById('agentList');
+const $msgs = document.getElementById('messages');
+const $input = document.getElementById('msgInput');
+const $send = document.getElementById('sendBtn');
+const $target = document.getElementById('targetSel');
+const $conn = document.getElementById('connBadge');
+const $agents = document.getElementById('agentList');
 
+// ═══════════════ WebSocket ═══════════════
 function connect() {
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${protocol}//${location.host}/ws`);
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
 
   ws.onopen = () => {
-    connStatus.textContent = 'connected';
-    connStatus.className = 'connection-status connected';
-    sendBtn.disabled = false;
+    $conn.textContent = 'live';
+    $conn.className = 'conn-badge on';
+    $send.disabled = false;
   };
 
   ws.onclose = () => {
-    connStatus.textContent = 'disconnected';
-    connStatus.className = 'connection-status disconnected';
-    sendBtn.disabled = true;
+    $conn.textContent = 'offline';
+    $conn.className = 'conn-badge off';
+    $send.disabled = true;
     setTimeout(connect, 2000);
   };
 
   ws.onerror = () => ws.close();
 
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === 'history') {
-      messagesEl.innerHTML = '';
-      data.messages.forEach(renderMessage);
-      scrollToBottom();
-    } else if (data.type === 'message') {
-      renderMessage(data.message);
-      scrollToBottom();
-    } else if (data.type === 'agent_status') {
-      agentStatus = data.status;
-      renderAgentList();
-    } else if (data.type === 'membership') {
-      agentMembership[data.agent] = data.in_room;
-      renderAgentList();
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'history') {
+      $msgs.innerHTML = '';
+      d.messages.forEach(renderMsg);
+      scrollEnd();
+    } else if (d.type === 'message') {
+      renderMsg(d.message);
+      scrollEnd();
+    } else if (d.type === 'agent_status') {
+      // New format: d.agents = {name: {presence, activity, in_room}}
+      agentData = d.agents || {};
+      renderAgents();
+    } else if (d.type === 'membership') {
+      if (agentData[d.agent]) {
+        agentData[d.agent].in_room = d.in_room;
+      }
+      renderAgents();
     }
   };
 }
 
-function renderMessage(msg) {
-  const div = document.createElement('div');
-  const classes = ['message'];
-  if (msg.type === 'system') classes.push('system');
-  else if (msg.target !== 'all') classes.push('direct');
-  div.className = classes.join(' ');
+// ═══════════════ Messages ═══════════════
+function renderMsg(m) {
+  const el = document.createElement('div');
+  const cls = m.type === 'system' ? 'msg system' : m.target !== 'all' ? 'msg direct' : 'msg';
+  el.className = cls;
 
-  if (msg.type === 'system') {
-    div.textContent = msg.content;
+  if (m.type === 'system') {
+    el.textContent = m.content;
   } else {
-    const ts = msg.timestamp ? msg.timestamp.slice(11, 19) : '';
-    const targetBadge = msg.target !== 'all'
-      ? `<span class="message-target">@${escapeHtml(msg.target)}</span>`
-      : '';
-
-    div.innerHTML = `
-      <div class="message-header">
-        <span class="message-sender" style="color: ${getColor(msg.sender)}">${escapeHtml(msg.sender)}</span>
-        ${targetBadge}
-        <span class="message-time">${ts}</span>
+    const ts = m.timestamp ? m.timestamp.slice(11, 19) : '';
+    const tag = m.target !== 'all' ? `<span class="msg-tag">@${esc(m.target)}</span>` : '';
+    el.innerHTML = `
+      <div class="msg-head">
+        <span class="msg-sender" style="color:${color(m.sender)}">${esc(m.sender)}</span>
+        ${tag}
+        <span class="msg-time">${ts}</span>
       </div>
-      <div class="message-content">${escapeHtml(msg.content)}</div>
+      <div class="msg-body">${esc(m.content)}</div>
     `;
   }
-
-  messagesEl.appendChild(div);
+  $msgs.appendChild(el);
 }
 
+// ═══════════════ Agent Sidebar ═══════════════
 function shortRole(role) {
-  // Extract a short label from the role string (first phrase before the dash or period)
   if (!role) return '';
   const m = role.match(/^Phase \d+[AB]?:\s*([^—–\-\.]+)/);
   return m ? m[1].trim() : '';
 }
 
-function renderAgentList() {
-  agentList.innerHTML = '';
+function renderAgents() {
+  $agents.innerHTML = '';
 
-  // Gurvinder always first
-  const gurvDiv = document.createElement('div');
-  gurvDiv.className = 'agent-item';
-  gurvDiv.innerHTML = `
-    <span class="agent-dot active"></span>
-    <span class="agent-name" style="color: ${getColor('gurvinder')}">gurvinder</span>
+  // Gurvinder
+  $agents.innerHTML += `
+    <div class="agent-card" onclick="document.getElementById('targetSel').value='all';document.getElementById('msgInput').focus()">
+      <div class="agent-card-top">
+        <span class="presence-dot active"></span>
+        <span class="agent-name" style="color:${color('gurvinder')}">gurvinder</span>
+      </div>
+    </div>
   `;
-  gurvDiv.onclick = () => { targetSelect.value = 'all'; msgInput.focus(); };
-  agentList.appendChild(gurvDiv);
 
-  // Agents from roster (fetched from API)
-  agentRoster.forEach(agent => {
-    const raw = agentStatus[agent.name];
-    const presence = (raw === true) ? 'active' : (raw === false) ? 'offline' : (raw || 'offline');
-    const inRoom = agentMembership[agent.name] !== undefined ? agentMembership[agent.name] : (agent.in_room !== false);
-    const label = shortRole(agent.role);
-    const presenceLabel = {active: 'idle', busy: 'working', session: 'no claude', offline: 'offline'}[presence] || '';
-    const statusText = !inRoom ? 'left room' : presenceLabel;
-    const dotClass = !inRoom ? 'session' : presence;
-    const opacity = !inRoom ? 'opacity:0.4;' : '';
+  agentRoster.forEach(a => {
+    const d = agentData[a.name] || {};
+    const presence = d.presence || 'offline';
+    const activity = d.activity || null;
+    const inRoom = d.in_room !== undefined ? d.in_room : true;
+    const role = shortRole(a.role);
+    const deboarded = !inRoom;
 
-    const div = document.createElement('div');
-    div.className = 'agent-item';
-    div.style.cssText = opacity;
-    div.innerHTML = `
-      <span class="agent-dot ${dotClass}"></span>
-      <span style="display:flex;flex-direction:column;gap:1px;flex:1">
-        <span class="agent-name" style="color: ${getColor(agent.name)}">${agent.name}</span>
-        ${label ? `<span style="font-size:10px;color:#8b949e">${label}${statusText ? ' · ' + statusText : ''}</span>` : ''}
-      </span>
-      <span class="agent-action" data-agent="${agent.name}" data-in-room="${inRoom}"
-            style="font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;background:#21262d;color:#8b949e"
-            title="${inRoom ? 'Remove from room' : 'Bring back to room'}">${inRoom ? 'x' : '+'}</span>
+    const btnLabel = deboarded ? 'reboard' : 'deboard';
+    const btnClass = deboarded ? 'agent-board-btn reboard' : 'agent-board-btn';
+    const cardClass = deboarded ? 'agent-card deboarded' : 'agent-card';
+    const dotClass = deboarded ? 'presence-dot session' : `presence-dot ${presence}`;
+
+    let activityHtml = '';
+    if (deboarded) {
+      activityHtml = '<div class="agent-activity" style="color:var(--text-dim)">de-boarded</div>';
+    } else if (activity) {
+      const actClass = presence === 'typing' ? 'agent-activity typing' : 'agent-activity';
+      activityHtml = `<div class="${actClass}">${esc(activity)}</div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = cardClass;
+    card.innerHTML = `
+      <div class="agent-card-top">
+        <span class="${dotClass}"></span>
+        <span class="agent-name" style="color:${color(a.name)}">${a.name}</span>
+        <button class="${btnClass}" data-agent="${a.name}" data-action="${btnLabel}">${btnLabel}</button>
+      </div>
+      <div class="agent-meta">
+        ${role ? `<div class="agent-role">${role}</div>` : ''}
+        ${activityHtml}
+      </div>
     `;
-    div.querySelector('.agent-name').onclick = () => { targetSelect.value = agent.name; msgInput.focus(); };
-    div.querySelector('.agent-action').onclick = (e) => {
+
+    // Click name -> set target
+    card.querySelector('.agent-name').onclick = (e) => {
       e.stopPropagation();
-      const action = inRoom ? 'leave' : 'join';
-      fetch('/api/agents/' + agent.name + '/' + action, {method: 'POST'});
+      $target.value = a.name;
+      $input.focus();
     };
-    agentList.appendChild(div);
+
+    // Click deboard/reboard button
+    card.querySelector('.agent-board-btn').onclick = (e) => {
+      e.stopPropagation();
+      const action = e.target.dataset.action;
+      fetch(`/api/agents/${a.name}/${action}`, { method: 'POST' });
+    };
+
+    $agents.appendChild(card);
   });
 
-  // Populate target dropdown
-  const current = targetSelect.value;
-  targetSelect.innerHTML = '<option value="all">@all</option>';
-  agentRoster.forEach(agent => {
+  // Update target dropdown
+  const cur = $target.value;
+  $target.innerHTML = '<option value="all">@all</option>';
+  agentRoster.forEach(a => {
     const opt = document.createElement('option');
-    opt.value = agent.name;
-    opt.textContent = `@${agent.name}`;
-    targetSelect.appendChild(opt);
+    opt.value = a.name;
+    opt.textContent = `@${a.name}`;
+    $target.appendChild(opt);
   });
-  targetSelect.value = current || 'all';
+  $target.value = cur || 'all';
 }
 
-function sendMessage() {
-  const content = msgInput.value.trim();
-  if (!content || !ws || ws.readyState !== WebSocket.OPEN) return;
+// ═══════════════ Send ═══════════════
+function send() {
+  const text = $input.value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
 
   ws.send(JSON.stringify({
     sender: 'gurvinder',
-    target: targetSelect.value,
-    content: content,
+    target: $target.value,
+    content: text,
     type: 'message',
   }));
 
-  renderMessage({
+  renderMsg({
     sender: 'gurvinder',
-    target: targetSelect.value,
-    content: content,
+    target: $target.value,
+    content: text,
     type: 'message',
     timestamp: new Date().toISOString(),
   });
-  scrollToBottom();
+  scrollEnd();
 
-  msgInput.value = '';
-  msgInput.style.height = 'auto';
-  targetSelect.value = 'all';
+  $input.value = '';
+  $input.style.height = 'auto';
+  $target.value = 'all';
 }
 
-function scrollToBottom() {
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
+function scrollEnd() { $msgs.scrollTop = $msgs.scrollHeight; }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-msgInput.addEventListener('input', () => {
-  msgInput.style.height = 'auto';
-  msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
+// ═══════════════ Events ═══════════════
+$input.addEventListener('input', () => {
+  $input.style.height = 'auto';
+  $input.style.height = Math.min($input.scrollHeight, 120) + 'px';
 });
 
-msgInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+$input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
 
-sendBtn.addEventListener('click', sendMessage);
+$send.addEventListener('click', send);
 
-// Fetch agent roster from API (includes in_room state), then connect
+// ═══════════════ Init ═══════════════
 fetch('/api/agents')
   .then(r => r.json())
   .then(agents => {
     agentRoster = agents;
-    agents.forEach(a => { agentMembership[a.name] = a.in_room !== false; });
-    renderAgentList();
+    agents.forEach(a => {
+      agentData[a.name] = {
+        presence: a.presence || 'offline',
+        activity: a.activity || null,
+        in_room: a.in_room !== false,
+      };
+    });
+    renderAgents();
   })
-  .catch(() => { /* server not ready yet, WebSocket will trigger re-render */ });
+  .catch(() => {});
 connect();
 </script>
 </body>
