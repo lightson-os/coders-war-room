@@ -1,0 +1,35 @@
+port: 5680
+project_path: ~/contextualise
+
+agents:
+  - name: supervisor
+    role: "Oversees all phases, coordinates cross-phase wiring, resolves conflicts"
+    tmux_session: warroom-supervisor
+
+  - name: phase-1
+    role: "Phase 1 owner — responsible for Phase 1 code and wiring"
+    tmux_session: warroom-phase-1
+
+  - name: phase-2
+    role: "Phase 2 owner — responsible for Phase 2 code and wiring"
+    tmux_session: warroom-phase-2
+
+  - name: phase-3
+    role: "Phase 3 owner — responsible for Phase 3 code and wiring"
+    tmux_session: warroom-phase-3
+
+  - name: phase-4
+    role: "Phase 4 owner — responsible for Phase 4 code and wiring"
+    tmux_session: warroom-phase-4
+
+  - name: phase-5
+    role: "Phase 5 owner — responsible for Phase 5 code and wiring"
+    tmux_session: warroom-phase-5
+
+  - name: phase-6
+    role: "Phase 6 owner — responsible for Phase 6 code and wiring"
+    tmux_session: warroom-phase-6
+
+  - name: git-agent
+    role: "Handles all git operations: commits, branches, PRs, conflict resolution. NEVER execute git commands without posting plan and receiving confirmation from gurvinder or supervisor first."
+    tmux_session: warroom-git-agent
