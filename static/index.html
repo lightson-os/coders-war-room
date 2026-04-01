@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coder's War Room</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    background: #0d1117;
+    color: #c9d1d9;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #58a6ff;
+  }
+
+  .connection-status {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: #1a1e24;
+  }
+
+  .connection-status.connected { color: #3fb950; }
+  .connection-status.disconnected { color: #f85149; }
+
+  .main-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 220px;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .sidebar h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8b949e;
+    margin-bottom: 12px;
+  }
+
+  .agent-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 2px;
+    font-size: 13px;
+  }
+
+  .agent-item:hover { background: #1f2937; }
+
+  .agent-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .agent-dot.online { background: #3fb950; box-shadow: 0 0 4px #3fb95066; }
+  .agent-dot.offline { background: #484f58; }
+
+  .chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+  }
+
+  .message {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #161b22;
+    border-left: 3px solid #30363d;
+  }
+
+  .message.direct {
+    background: #1c2333;
+    border-left-color: #f0883e;
+  }
+
+  .message.system {
+    background: transparent;
+    border-left: none;
+    color: #8b949e;
+    font-style: italic;
+    font-size: 12px;
+    padding: 4px 12px;
+  }
+
+  .message-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .message-sender {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .message-target {
+    font-size: 11px;
+    color: #f0883e;
+    background: #f0883e22;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .message-time {
+    font-size: 11px;
+    color: #484f58;
+  }
+
+  .message-content {
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .input-area {
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    padding: 12px 20px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .target-selector {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .target-selector:focus { border-color: #58a6ff; outline: none; }
+
+  .message-input {
+    flex: 1;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: none;
+    min-height: 38px;
+    max-height: 120px;
+  }
+
+  .message-input:focus { border-color: #58a6ff; outline: none; }
+
+  .send-btn {
+    background: #238636;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .send-btn:hover { background: #2ea043; }
+  .send-btn:disabled { background: #21262d; color: #484f58; cursor: default; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CODER'S WAR ROOM</h1>
+  <span id="connStatus" class="connection-status disconnected">disconnected</span>
+</header>
+
+<div class="main-layout">
+  <aside class="sidebar">
+    <h2>Agents</h2>
+    <div id="agentList"></div>
+  </aside>
+
+  <div class="chat-container">
+    <div id="messages" class="messages"></div>
+
+    <div class="input-area">
+      <select id="targetSelect" class="target-selector">
+        <option value="all">@all</option>
+      </select>
+      <textarea id="msgInput" class="message-input" placeholder="Type a message..." rows="1"></textarea>
+      <button id="sendBtn" class="send-btn" disabled>Send</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = {
+  'gurvinder':  '#f0883e',
+  'supervisor': '#bc8cff',
+  'phase-1':    '#58a6ff',
+  'phase-2':    '#3fb950',
+  'phase-3':    '#f778ba',
+  'phase-4':    '#79c0ff',
+  'phase-5':    '#d2a8ff',
+  'phase-6':    '#7ee787',
+  'git-agent':  '#ffa657',
+};
+
+function getColor(name) {
+  return COLORS[name] || '#8b949e';
+}
+
+let ws = null;
+let agentStatus = {};
+
+const messagesEl = document.getElementById('messages');
+const msgInput = document.getElementById('msgInput');
+const sendBtn = document.getElementById('sendBtn');
+const targetSelect = document.getElementById('targetSelect');
+const connStatus = document.getElementById('connStatus');
+const agentList = document.getElementById('agentList');
+
+function connect() {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${protocol}//${location.host}/ws`);
+
+  ws.onopen = () => {
+    connStatus.textContent = 'connected';
+    connStatus.className = 'connection-status connected';
+    sendBtn.disabled = false;
+  };
+
+  ws.onclose = () => {
+    connStatus.textContent = 'disconnected';
+    connStatus.className = 'connection-status disconnected';
+    sendBtn.disabled = true;
+    setTimeout(connect, 2000);
+  };
+
+  ws.onerror = () => ws.close();
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === 'history') {
+      messagesEl.innerHTML = '';
+      data.messages.forEach(renderMessage);
+      scrollToBottom();
+    } else if (data.type === 'message') {
+      renderMessage(data.message);
+      scrollToBottom();
+    } else if (data.type === 'agent_status') {
+      agentStatus = data.status;
+      renderAgentList();
+    }
+  };
+}
+
+function renderMessage(msg) {
+  const div = document.createElement('div');
+  const classes = ['message'];
+  if (msg.type === 'system') classes.push('system');
+  else if (msg.target !== 'all') classes.push('direct');
+  div.className = classes.join(' ');
+
+  if (msg.type === 'system') {
+    div.textContent = msg.content;
+  } else {
+    const ts = msg.timestamp ? msg.timestamp.slice(11, 19) : '';
+    const targetBadge = msg.target !== 'all'
+      ? `<span class="message-target">@${escapeHtml(msg.target)}</span>`
+      : '';
+
+    div.innerHTML = `
+      <div class="message-header">
+        <span class="message-sender" style="color: ${getColor(msg.sender)}">${escapeHtml(msg.sender)}</span>
+        ${targetBadge}
+        <span class="message-time">${ts}</span>
+      </div>
+      <div class="message-content">${escapeHtml(msg.content)}</div>
+    `;
+  }
+
+  messagesEl.appendChild(div);
+}
+
+function renderAgentList() {
+  const allNames = ['gurvinder', 'supervisor', 'phase-1', 'phase-2', 'phase-3',
+                     'phase-4', 'phase-5', 'phase-6', 'git-agent'];
+  agentList.innerHTML = '';
+
+  allNames.forEach(name => {
+    const isOnline = name === 'gurvinder' ? true : !!agentStatus[name];
+    const div = document.createElement('div');
+    div.className = 'agent-item';
+    div.innerHTML = `
+      <span class="agent-dot ${isOnline ? 'online' : 'offline'}"></span>
+      <span class="agent-name" style="color: ${getColor(name)}">${name}</span>
+    `;
+    div.onclick = () => {
+      targetSelect.value = name === 'gurvinder' ? 'all' : name;
+      msgInput.focus();
+    };
+    agentList.appendChild(div);
+  });
+
+  const current = targetSelect.value;
+  targetSelect.innerHTML = '<option value="all">@all</option>';
+  allNames.filter(n => n !== 'gurvinder').forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = `@${name}`;
+    targetSelect.appendChild(opt);
+  });
+  targetSelect.value = current || 'all';
+}
+
+function sendMessage() {
+  const content = msgInput.value.trim();
+  if (!content || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+  ws.send(JSON.stringify({
+    sender: 'gurvinder',
+    target: targetSelect.value,
+    content: content,
+    type: 'message',
+  }));
+
+  renderMessage({
+    sender: 'gurvinder',
+    target: targetSelect.value,
+    content: content,
+    type: 'message',
+    timestamp: new Date().toISOString(),
+  });
+  scrollToBottom();
+
+  msgInput.value = '';
+  msgInput.style.height = 'auto';
+  targetSelect.value = 'all';
+}
+
+function scrollToBottom() {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+msgInput.addEventListener('input', () => {
+  msgInput.style.height = 'auto';
+  msgInput.style.height = Math.min(msgInput.scrollHeight, 120) + 'px';
+});
+
+msgInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+sendBtn.addEventListener('click', sendMessage);
+
+connect();
+renderAgentList();
+</script>
+</body>
+</html>
