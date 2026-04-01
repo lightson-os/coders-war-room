@@ -1,0 +1,10 @@
+warroom.db
+warroom.db-wal
+warroom.db-shm
+__pycache__/
+*.pyc
+.pytest_cache/
+.hypothesis/
+/tmp/
+*.log
+.DS_Store
