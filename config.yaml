@@ -5,6 +5,7 @@ agents:
   - name: supervisor
     role: "Oversees all 6 North Star phases, coordinates cross-phase wiring and bug fixes, resolves conflicts between phase agents, maintains the big picture of daemon integration"
     tmux_session: warroom-supervisor
+    auto_onboard: false  # joins manually via join.sh from existing session
 
   - name: phase-1
     role: "Phase 1: Foundation — owns supervisor.py, config.py, state.py, safety.py, telegram_bot.py, monitor.py. Responsible for daemon skeleton, config loading, SQLite DatabaseManager, action registry, bash classifier, rate limiter, Telegram bot, health monitor, LaunchAgent plist."

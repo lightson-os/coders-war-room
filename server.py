@@ -32,6 +32,9 @@ MAX_TMUX_MSG_LEN = 500
 # ---------------------------------------------------------------------------
 connected_clients: list[WebSocket] = []
 agent_queues: dict[str, list[dict]] = {}
+# Tracks which agents are "in" the war room (True = in, False = de-boarded)
+# All agents start as "in" — de-boarding removes them from dispatch without killing their session
+agent_membership: dict[str, bool] = {a["name"]: True for a in AGENTS}
 
 
 # ---------------------------------------------------------------------------
@@ -203,12 +206,16 @@ def send_to_tmux(session_name: str, text: str):
 
 
 async def dispatch_to_agents(msg: dict):
-    """Dispatch a message to all agents except the sender."""
+    """Dispatch a message to all agents that are in the war room, except the sender."""
     for agent in AGENTS:
         name = agent["name"]
         session = agent["tmux_session"]
 
         if name == msg["sender"]:
+            continue
+
+        # Skip de-boarded agents (they left the conversation but session is alive)
+        if not agent_membership.get(name, False):
             continue
 
         if not tmux_session_exists(session):
@@ -237,6 +244,9 @@ async def flush_queues_loop():
             session = agent["tmux_session"]
 
             if name not in agent_queues or not agent_queues[name]:
+                continue
+            if not agent_membership.get(name, False):
+                agent_queues.pop(name, None)  # discard queued messages for de-boarded agents
                 continue
             if not tmux_session_exists(session):
                 continue
@@ -359,9 +369,37 @@ async def list_agents():
             "role": a["role"],
             "online": tmux_session_exists(a["tmux_session"]),
             "presence": get_agent_presence(a["tmux_session"]),
+            "in_room": agent_membership.get(a["name"], False),
         }
         for a in AGENTS
     ]
+
+
+@app.post("/api/agents/{agent_name}/leave")
+async def agent_leave(agent_name: str):
+    """De-board an agent — stops message delivery but keeps their session alive."""
+    if agent_name not in AGENT_NAMES:
+        return {"error": f"Unknown agent: {agent_name}"}, 404
+    agent_membership[agent_name] = False
+    agent_queues.pop(agent_name, None)
+    saved = await save_message("system", "all", f"{agent_name} has left the war room", "system")
+    await broadcast_ws({"type": "message", "message": saved})
+    await broadcast_ws({"type": "membership", "agent": agent_name, "in_room": False})
+    return {"status": "left", "agent": agent_name}
+
+
+@app.post("/api/agents/{agent_name}/join")
+async def agent_join(agent_name: str):
+    """Re-board an agent — resumes message delivery."""
+    if agent_name not in AGENT_NAMES:
+        return {"error": f"Unknown agent: {agent_name}"}, 404
+    was_in = agent_membership.get(agent_name, False)
+    agent_membership[agent_name] = True
+    if not was_in:
+        saved = await save_message("system", "all", f"{agent_name} has joined the war room", "system")
+        await broadcast_ws({"type": "message", "message": saved})
+    await broadcast_ws({"type": "membership", "agent": agent_name, "in_room": True})
+    return {"status": "joined", "agent": agent_name}
 
 
 @app.websocket("/ws")

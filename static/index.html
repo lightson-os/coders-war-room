@@ -255,6 +255,7 @@ function getColor(name) {
 
 let ws = null;
 let agentStatus = {};
+let agentMembership = {};  // name -> true/false (in room or not)
 let agentRoster = [];
 
 const messagesEl = document.getElementById('messages');
@@ -295,6 +296,9 @@ function connect() {
       scrollToBottom();
     } else if (data.type === 'agent_status') {
       agentStatus = data.status;
+      renderAgentList();
+    } else if (data.type === 'membership') {
+      agentMembership[data.agent] = data.in_room;
       renderAgentList();
     }
   };
@@ -349,23 +353,35 @@ function renderAgentList() {
   agentList.appendChild(gurvDiv);
 
   // Agents from roster (fetched from API)
-  // agentStatus values: "active" | "busy" | "session" | "offline" (or legacy true/false)
   agentRoster.forEach(agent => {
     const raw = agentStatus[agent.name];
-    // Support both new string presence and legacy boolean
     const presence = (raw === true) ? 'active' : (raw === false) ? 'offline' : (raw || 'offline');
+    const inRoom = agentMembership[agent.name] !== undefined ? agentMembership[agent.name] : (agent.in_room !== false);
     const label = shortRole(agent.role);
     const presenceLabel = {active: 'idle', busy: 'working', session: 'no claude', offline: 'offline'}[presence] || '';
+    const statusText = !inRoom ? 'left room' : presenceLabel;
+    const dotClass = !inRoom ? 'session' : presence;
+    const opacity = !inRoom ? 'opacity:0.4;' : '';
+
     const div = document.createElement('div');
     div.className = 'agent-item';
+    div.style.cssText = opacity;
     div.innerHTML = `
-      <span class="agent-dot ${presence}"></span>
-      <span style="display:flex;flex-direction:column;gap:1px">
+      <span class="agent-dot ${dotClass}"></span>
+      <span style="display:flex;flex-direction:column;gap:1px;flex:1">
         <span class="agent-name" style="color: ${getColor(agent.name)}">${agent.name}</span>
-        ${label ? `<span style="font-size:10px;color:#8b949e">${label}${presenceLabel ? ' · ' + presenceLabel : ''}</span>` : ''}
+        ${label ? `<span style="font-size:10px;color:#8b949e">${label}${statusText ? ' · ' + statusText : ''}</span>` : ''}
       </span>
+      <span class="agent-action" data-agent="${agent.name}" data-in-room="${inRoom}"
+            style="font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;background:#21262d;color:#8b949e"
+            title="${inRoom ? 'Remove from room' : 'Bring back to room'}">${inRoom ? 'x' : '+'}</span>
     `;
-    div.onclick = () => { targetSelect.value = agent.name; msgInput.focus(); };
+    div.querySelector('.agent-name').onclick = () => { targetSelect.value = agent.name; msgInput.focus(); };
+    div.querySelector('.agent-action').onclick = (e) => {
+      e.stopPropagation();
+      const action = inRoom ? 'leave' : 'join';
+      fetch('/api/agents/' + agent.name + '/' + action, {method: 'POST'});
+    };
     agentList.appendChild(div);
   });
 
@@ -430,10 +446,14 @@ msgInput.addEventListener('keydown', (e) => {
 
 sendBtn.addEventListener('click', sendMessage);
 
-// Fetch agent roster from API, then connect
+// Fetch agent roster from API (includes in_room state), then connect
 fetch('/api/agents')
   .then(r => r.json())
-  .then(agents => { agentRoster = agents; renderAgentList(); })
+  .then(agents => {
+    agentRoster = agents;
+    agents.forEach(a => { agentMembership[a.name] = a.in_room !== false; });
+    renderAgentList();
+  })
   .catch(() => { /* server not ready yet, WebSocket will trigger re-render */ });
 connect();
 </script>

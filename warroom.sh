@@ -92,6 +92,33 @@ except Exception as e:
 "
 }
 
+leave_room() {
+    local agent="${1:-$WARROOM_AGENT}"
+    local resp
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$WARROOM_SERVER/api/agents/$agent/leave")
+    local code
+    code=$(echo "$resp" | tail -1)
+    if [ "$code" = "200" ]; then
+        echo "Left the war room. Session still alive — you can keep working."
+        echo "Rejoin anytime: warroom.sh rejoin"
+    else
+        echo "Error leaving: $resp"
+    fi
+}
+
+rejoin_room() {
+    local agent="${1:-$WARROOM_AGENT}"
+    local resp
+    resp=$(curl -s -w "\n%{http_code}" -X POST "$WARROOM_SERVER/api/agents/$agent/join")
+    local code
+    code=$(echo "$resp" | tail -1)
+    if [ "$code" = "200" ]; then
+        echo "Rejoined the war room. Messages will be delivered again."
+    else
+        echo "Error rejoining: $resp"
+    fi
+}
+
 case "$1" in
     post)
         shift
@@ -105,6 +132,14 @@ case "$1" in
         shift
         show_mentions "$@"
         ;;
+    leave)
+        shift
+        leave_room "$@"
+        ;;
+    rejoin)
+        shift
+        rejoin_room "$@"
+        ;;
     *)
         echo "Coder's War Room — Agent CLI"
         echo ""
@@ -112,6 +147,8 @@ case "$1" in
         echo "  warroom.sh post [--to agent] message   Send a message"
         echo "  warroom.sh history [--count N]          Show all recent messages"
         echo "  warroom.sh mentions [--count N]         Show messages for me + @all"
+        echo "  warroom.sh leave                        Leave war room (keep working)"
+        echo "  warroom.sh rejoin                       Rejoin the war room"
         echo ""
         echo "Agent identity: $WARROOM_AGENT"
         echo "Server: $WARROOM_SERVER"
