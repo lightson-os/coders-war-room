@@ -7,7 +7,12 @@
 #   warroom.sh history --count 50                 # last 50 messages
 
 WARROOM_SERVER="${WARROOM_SERVER_URL:-http://localhost:5680}"
-WARROOM_AGENT="${WARROOM_AGENT_NAME:-unknown}"
+# Auto-detect identity: env var > tmux session name > unknown
+if [ -n "$WARROOM_AGENT_NAME" ]; then
+    WARROOM_AGENT="$WARROOM_AGENT_NAME"
+else
+    WARROOM_AGENT=$(tmux display-message -p '#S' 2>/dev/null | sed 's/^warroom-//' || echo "unknown")
+fi
 
 post_message() {
     local target="all"
