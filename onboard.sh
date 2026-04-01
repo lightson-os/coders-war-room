@@ -140,10 +140,11 @@ onboard_agent() {
     echo "  Creating tmux session: $session"
     tmux new-session -d -s "$session" -x 200 -y 50
 
-    # Set scrollback buffer (extra for supervisor)
+    # Enable mouse scroll + set scrollback buffer
+    tmux set-option -t "$session" mouse on
     if [ "$name" = "supervisor" ]; then
         tmux set-option -t "$session" history-limit 50000
-        echo "  Scrollback: 50000 (supervisor)"
+        echo "  Scrollback: 50000 (supervisor) + mouse on"
     else
         tmux set-option -t "$session" history-limit 10000
     fi
