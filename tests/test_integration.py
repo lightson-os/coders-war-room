@@ -225,3 +225,32 @@ def test_ownership_api():
     assert data["agent"] == "phase-1"
     assert isinstance(data["patterns"], list)
     assert isinstance(data["resolved"], list)
+
+
+def test_files_api():
+    """Test the files listing endpoint."""
+    resp = httpx.get(f"{SERVER_URL}/api/files?path=.")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "entries" in data
+    assert len(data["entries"]) > 0
+    dirs = [e for e in data["entries"] if e["type"] == "dir" and e["name"] == "northstar"]
+    assert len(dirs) == 1
+    assert dirs[0]["has_owned"] is True
+
+
+def test_files_ownership():
+    """Test that files show correct ownership."""
+    resp = httpx.get(f"{SERVER_URL}/api/files?path=northstar")
+    assert resp.status_code == 200
+    data = resp.json()
+    state = [e for e in data["entries"] if e["name"] == "state.py"]
+    if state:
+        assert state[0]["owner"] == "phase-1"
+        assert state[0]["color"] is not None
+
+
+def test_files_security():
+    """Test path traversal prevention."""
+    resp = httpx.get(f"{SERVER_URL}/api/files?path=../../etc")
+    assert resp.status_code == 403
