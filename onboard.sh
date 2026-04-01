@@ -136,9 +136,15 @@ onboard_agent() {
         fi
     fi
 
-    # Create new session
+    # Create new session with project directory as default path
     echo "  Creating tmux session: $session"
-    tmux new-session -d -s "$session" -x 200 -y 50
+    tmux new-session -d -s "$session" -x 200 -y 50 -c "$PROJECT_PATH"
+
+    # Set default-path so new panes/windows open in the project directory
+    tmux set-option -t "$session" default-command "cd $PROJECT_PATH && exec $SHELL"
+
+    # Set window title for Warp tab display
+    tmux rename-window -t "$session" "$name"
 
     # Enable mouse scroll + set scrollback buffer
     tmux set-option -t "$session" mouse on

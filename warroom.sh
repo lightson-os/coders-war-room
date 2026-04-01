@@ -148,18 +148,27 @@ case "$1" in
             echo "Error: No session '$SESSION'. Agent not onboarded."
             exit 1
         fi
-        # Create launcher script
-        LAUNCHER="/tmp/warroom-attach-${AGENT}.sh"
-        echo "#!/bin/bash" > "$LAUNCHER"
-        echo "tmux attach -t $SESSION" >> "$LAUNCHER"
+        # Get the agent's working directory from tmux pane
+        AGENT_DIR=$(tmux display-message -t "$SESSION" -p '#{pane_current_path}' 2>/dev/null || echo "$HOME")
+        # Set window title for Warp tab
+        tmux rename-window -t "$SESSION" "$AGENT"
+        # Create launcher IN the project directory so Warp file browser opens there
+        LAUNCHER="${AGENT_DIR}/.warroom-attach.sh"
+        cat > "$LAUNCHER" << LAUNCH_EOF
+#!/bin/bash
+# War Room — $AGENT
+cd $AGENT_DIR
+printf '\033]0;$AGENT — War Room\007'
+exec tmux attach -t $SESSION
+LAUNCH_EOF
         chmod +x "$LAUNCHER"
         # Try Warp first, fall back to Terminal.app
         if [ -d "/Applications/Warp.app" ]; then
-            open -a Warp "$LAUNCHER" && echo "Opened $AGENT in Warp"
+            open -a Warp "$LAUNCHER" && echo "Opened $AGENT in Warp (dir: $AGENT_DIR)"
         else
             osascript -e "tell application \"Terminal\"
                 activate
-                do script \"tmux attach -t $SESSION\"
+                do script \"cd $AGENT_DIR && tmux attach -t $SESSION\"
             end tell" 2>/dev/null && echo "Opened $AGENT in Terminal.app"
         fi || echo "Manual: tmux attach -t $SESSION"
         ;;

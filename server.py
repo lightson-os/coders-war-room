@@ -24,6 +24,9 @@ PORT = CONFIG.get("port", 5680)
 AGENTS = CONFIG.get("agents", [])
 AGENT_NAMES = {a["name"] for a in AGENTS}
 AGENT_SESSIONS = {a["name"]: a["tmux_session"] for a in AGENTS}
+# Each agent's working directory (for Warp file browser)
+PROJECT_PATH = str(Path(CONFIG.get("project_path", "~")).expanduser())
+AGENT_DIRS: dict[str, str] = {a["name"]: PROJECT_PATH for a in AGENTS}
 
 MAX_TMUX_MSG_LEN = 500
 
@@ -445,19 +448,37 @@ async def agent_attach(agent_name: str):
     session = AGENT_SESSIONS.get(agent_name)
     if not tmux_session_exists(session):
         return JSONResponse({"error": f"No tmux session for {agent_name}"}, status_code=404)
+
+    # Get the agent's working directory for Warp's file browser
+    agent_dir = AGENT_DIRS.get(agent_name, CONFIG.get("project_path", "~"))
+    agent_dir = str(Path(agent_dir).expanduser())
+
     try:
-        # Create a launcher script for this agent
-        launcher = Path(f"/tmp/warroom-attach-{agent_name}.sh")
-        launcher.write_text(f"#!/bin/bash\ntmux attach -t {session}\n")
+        # Set tmux window title so Warp tab shows agent name
+        subprocess.run(
+            ["tmux", "rename-window", "-t", session, agent_name],
+            capture_output=True, timeout=2,
+        )
+
+        # Create launcher script IN the project directory so Warp's
+        # file browser opens there (Warp uses the script's location as CWD)
+        launcher = Path(agent_dir) / f".warroom-attach.sh"
+        launcher.write_text(
+            f"#!/bin/bash\n"
+            f"# War Room — {agent_name}\n"
+            f"cd {agent_dir}\n"
+            f"printf '\\033]0;{agent_name} — War Room\\007'\n"
+            f"exec tmux attach -t {session}\n"
+        )
         launcher.chmod(0o755)
-        # Try Warp first, fall back to Terminal.app
+
         warp = Path("/Applications/Warp.app")
         if warp.exists():
             subprocess.run(["open", "-a", "Warp", str(launcher)], capture_output=True, timeout=5)
         else:
             subprocess.run(
                 ["osascript", "-e",
-                 f'tell application "Terminal"\n  activate\n  do script "tmux attach -t {session}"\nend tell'],
+                 f'tell application "Terminal"\n  activate\n  do script "cd {agent_dir} && tmux attach -t {session}"\nend tell'],
                 capture_output=True, timeout=5,
             )
         return {"status": "attached", "agent": agent_name, "session": session}
