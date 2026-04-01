@@ -160,7 +160,7 @@ Informational only. Agent should not respond.
 
 `onboard.sh` does the following for each agent:
 
-1. Creates a tmux session: `tmux new-session -d -s warroom-<name>`
+1. Creates a tmux session: `tmux new-session -d -s warroom-<name>` (supervisor gets extended scrollback: `tmux set-option -t warroom-supervisor history-limit 50000`)
 2. Sends the initial Claude Code command with the project directory: `claude --dangerously-skip-permissions -p "<project_path>"`
 3. Waits for Claude Code to become ready (polls for the input prompt indicator with a 10-second timeout)
 4. Injects the onboarding prompt via `tmux send-keys`:
@@ -203,7 +203,7 @@ Single-page HTML served by FastAPI at `http://localhost:5680`.
 - Message history loaded on connect (last 200 messages)
 - Visual distinction between direct messages, broadcasts, and system messages
 - Timestamp on each message
-- Agent online/offline indicators (based on tmux session existence)
+- **Activity pulse** per agent — green dot if `tmux has-session -t warroom-<name>` returns 0, grey if session is dead. Server polls session status every 5 seconds and pushes to web UI via WebSocket.
 
 ### Non-features (YAGNI)
 
@@ -234,13 +234,76 @@ The agent's identity is set via the `WARROOM_AGENT_NAME` environment variable, i
 
 ---
 
+## Dispatch Safety — The Readiness Guard
+
+tmux is blind — it has no idea whether Claude Code is mid-output, running a tool, or waiting for input. Injecting keys at the wrong moment causes garbled input or lost messages.
+
+### Readiness Check (capture-pane)
+
+Before dispatching to any agent, the server runs:
+```bash
+tmux capture-pane -t warroom-<name> -p -l 3
+```
+This grabs the last 3 lines of the terminal. If it contains Claude Code's input prompt indicator (the `>` character at start of line, or similar idle pattern), the agent is ready — send the message. If not, queue it.
+
+### Per-Agent Message Queue
+
+Each agent has a dispatch queue on the server. When a message arrives:
+1. Check readiness via capture-pane
+2. If ready → dispatch immediately via send-keys
+3. If busy → enqueue the message
+4. A background task polls every 2 seconds for busy agents, checking readiness
+
+### Message Batching for Busy Agents
+
+If multiple messages queue up while an agent is busy, they are combined into a single injection when the agent becomes ready:
+```
+[WARROOM] 3 messages while you were busy:
+
+[WARROOM @phase-1] supervisor: Fix the import in config.py
+[WARROOM] phase-3: Event bus is wired to health monitor
+[WARROOM] git-agent: Committed phase-2 changes to feature branch
+```
+Agent gets full context in one shot, decides what to act on.
+
+### Message Truncation
+
+tmux send-keys has a buffer limit. Large messages choke the terminal buffer and can crash the agent session.
+
+- Messages over **500 characters** are truncated in the tmux injection
+- The truncated message includes a summary + pointer: `[Full message at http://localhost:5680/message/<id>]`
+- The web UI always shows the full message
+- The `/message/<id>` endpoint returns plain text (agent can curl it if needed)
+
+---
+
+## Git-Agent Protocol
+
+The git-agent is the most cautious agent in the war room. It treats every incoming message as a **request to plan**, not a command to execute.
+
+### Workflow
+
+1. Receives a request (e.g., `@git-agent commit phase-2 changes`)
+2. Posts its **plan** to the war room: "I will commit files X, Y, Z with message '...' to branch feature/phase-2. Confirm?"
+3. **Waits for explicit confirmation** from gurvinder or supervisor before executing
+4. Posts the result after execution: "Committed abc123 to feature/phase-2"
+
+### Rules
+
+- Never force-push without confirmation from gurvinder (not just supervisor)
+- Never commit to main directly — always use feature branches
+- Always post a diff summary before committing
+- If a merge conflict is detected, post it to the war room and wait for guidance
+
+---
+
 ## Concurrency & Safety
 
 - **SQLite WAL mode** enabled for concurrent reads/writes from 8+ processes
 - **Server is single-process** — all tmux dispatch happens sequentially per message (fast enough for chat-rate traffic)
-- **tmux send-keys is atomic** — each injection is a single command, no interleaving
+- **tmux send-keys guarded by readiness check** — never injects into a busy terminal
 - **No file locking needed** — SQLite handles it
-- **Agent can be mid-response when a message arrives** — tmux queues the input, Claude Code processes it when it next waits for input. This is acceptable behavior: the message waits a few seconds until the agent is free.
+- **Per-agent dispatch queues** — messages never lost, delivered in order when agent is ready
 
 ---
 
@@ -291,7 +354,7 @@ tmux list-sessions | grep warroom | cut -d: -f1 | xargs -I{} tmux kill-session -
 | Two agents post simultaneously | SQLite WAL handles concurrent writes. Server processes sequentially. |
 | Message sent to non-existent agent | Stored in DB, not dispatched. Warning shown in web UI. |
 | Agent is mid-tool-call when message arrives | tmux queues input. Agent sees it when Claude Code next prompts for input. |
-| Very long message | tmux send-keys has a buffer limit. Messages over 1000 chars are truncated with a pointer to the web UI. |
+| Very long message | Messages over 500 chars truncated in tmux injection with link to full text at `/message/<id>`. Web UI always shows full message. |
 
 ---
 
