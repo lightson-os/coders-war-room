@@ -955,6 +955,97 @@
     border-color: var(--red);
     box-shadow: 0 0 8px rgba(255,82,82,0.15);
   }
+
+  /* ═══════════ FILE PANEL ═══════════ */
+  .file-panel {
+    width: 280px;
+    background: var(--bg-deep);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .fp-head {
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .fp-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .fp-path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fp-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .fp-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.1s;
+    user-select: none;
+  }
+
+  .fp-item:hover { background: var(--bg-card-hover); }
+
+  .fp-item.dir { color: var(--text-secondary); }
+  .fp-item.file { color: var(--text-dim); }
+  .fp-item.file.owned { color: var(--text-secondary); }
+
+  .fp-arrow {
+    font-size: 8px;
+    width: 10px;
+    text-align: center;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .fp-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .fp-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fp-item[data-depth="0"] { padding-left: 10px; }
+  .fp-item[data-depth="1"] { padding-left: 26px; }
+  .fp-item[data-depth="2"] { padding-left: 42px; }
+  .fp-item[data-depth="3"] { padding-left: 58px; }
+  .fp-item[data-depth="4"] { padding-left: 74px; }
+
+  .fp-item.dragging { opacity: 0.5; }
 </style>
 </head>
 <body>
@@ -988,6 +1079,14 @@
       <button id="sendBtn" class="send-btn" disabled>Send</button>
     </div>
   </div>
+
+  <aside class="file-panel" id="filePanel">
+    <div class="fp-head">
+      <span class="fp-title">Files</span>
+      <span id="fpPath" class="fp-path"></span>
+    </div>
+    <div id="fileTree" class="fp-tree"></div>
+  </aside>
 </div>
 
 <!-- ═══════════ DRAWER OVERLAY ═══════════ -->
@@ -1602,6 +1701,96 @@ function showDrawerError(msg) {
   $drawerErr.classList.add('show');
 }
 
+// ═══════════ File Browser ═══════════
+const $fileTree = $('fileTree');
+const $fpPath = $('fpPath');
+
+async function loadDir(path, depth, parentEl, autoExpand) {
+  try {
+    const resp = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
+    if (!resp.ok) return;
+    const data = await resp.json();
+
+    if (depth === 0) {
+      $fpPath.textContent = data.current === '.' ? 'project root' : data.current;
+    }
+
+    data.entries.forEach(entry => {
+      const item = document.createElement('div');
+      item.dataset.depth = depth;
+      item.dataset.path = entry.path;
+      item.dataset.type = entry.type;
+
+      if (entry.type === 'dir') {
+        item.className = 'fp-item dir';
+        const isExpanded = autoExpand && entry.has_owned;
+        item.innerHTML = `
+          <span class="fp-arrow">${isExpanded ? '▾' : '▸'}</span>
+          <span class="fp-name">${esc(entry.name)}</span>
+        `;
+        parentEl.appendChild(item);
+
+        const children = document.createElement('div');
+        children.style.display = isExpanded ? '' : 'none';
+        parentEl.appendChild(children);
+
+        if (isExpanded) {
+          loadDir(entry.path, depth + 1, children, true);
+        }
+
+        item.onclick = (e) => {
+          e.stopPropagation();
+          const arrow = item.querySelector('.fp-arrow');
+          if (children.style.display === 'none') {
+            children.style.display = '';
+            arrow.textContent = '▾';
+            if (!children.hasChildNodes()) {
+              loadDir(entry.path, depth + 1, children, false);
+            }
+          } else {
+            children.style.display = 'none';
+            arrow.textContent = '▸';
+          }
+        };
+
+      } else {
+        const isOwned = !!entry.owner;
+        item.className = `fp-item file${isOwned ? ' owned' : ''}`;
+        item.draggable = true;
+        const dot = entry.color
+          ? `<span class="fp-dot" style="background:${entry.color};box-shadow:0 0 4px ${entry.color}44" title="${esc(entry.owner)}"></span>`
+          : '<span style="width:6px"></span>';
+        item.innerHTML = `${dot}<span class="fp-name">${esc(entry.name)}</span>`;
+
+        item.onclick = (e) => {
+          e.stopPropagation();
+          fetch('/api/files/open', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({path: entry.path}),
+          });
+        };
+
+        item.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', entry.path);
+          e.dataTransfer.setData('application/x-warroom-file', entry.path);
+          item.classList.add('dragging');
+        };
+        item.ondragend = () => item.classList.remove('dragging');
+
+        parentEl.appendChild(item);
+      }
+    });
+  } catch (e) {
+    console.error('File tree error:', e);
+  }
+}
+
+function initFileTree() {
+  $fileTree.innerHTML = '';
+  loadDir('.', 0, $fileTree, true);
+}
+
 // ═══════════ Init ═══════════
 fetch('/api/agents').then(r => r.json()).then(agents => {
   agentRoster = agents;
@@ -1609,6 +1798,7 @@ fetch('/api/agents').then(r => r.json()).then(agents => {
   renderAgents();
 }).catch(() => {});
 connect();
+initFileTree();
 </script>
 </body>
 </html>
