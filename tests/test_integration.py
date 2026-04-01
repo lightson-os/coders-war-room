@@ -149,3 +149,45 @@ def test_direct_message():
     assert resp.status_code == 200
     msg = resp.json()
     assert msg["target"] == "phase-1"
+
+
+def test_browse_api():
+    """Test the directory browse endpoint."""
+    import os
+    home = os.path.expanduser("~")
+    resp = httpx.get(f"{SERVER_URL}/api/browse?path={home}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["current"] == home
+    assert len(data["directories"]) > 0
+    # Security: browsing outside home should fail
+    resp = httpx.get(f"{SERVER_URL}/api/browse?path=/etc")
+    assert resp.status_code == 403
+
+
+def test_create_and_use_dynamic_agent():
+    """Test creating a dynamic agent via API and verifying it joins the roster."""
+    import os
+    # Name must match ^[a-z0-9][a-z0-9\-]{0,18}[a-z0-9]$ (max 20 chars)
+    agent_name = "int-test-agent"
+    resp = httpx.post(f"{SERVER_URL}/api/agents/create", json={
+        "name": agent_name,
+        "directory": os.path.expanduser("~"),
+        "role": "Integration test",
+        "initial_prompt": "",
+        "model": "opus",
+        "skip_permissions": True,
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "created"
+    assert data["agent"]["name"] == agent_name
+
+    # Verify it shows up in the agent list
+    resp = httpx.get(f"{SERVER_URL}/api/agents")
+    agents = resp.json()
+    names = [a["name"] for a in agents]
+    assert agent_name in names
+
+    # Clean up: kill the tmux session
+    subprocess.run(["tmux", "kill-session", "-t", f"warroom-{agent_name}"], capture_output=True)
