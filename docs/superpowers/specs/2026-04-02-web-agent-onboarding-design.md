@@ -109,13 +109,13 @@ Returns top-level contents of the given directory (directories only, no files).
 
 **Server-side steps:**
 
-1. **Validate** — name uniqueness, directory exists, required fields
+1. **Validate** — name uniqueness (check BOTH in-memory roster AND config.yaml), directory exists, required fields
 2. **Create tmux session** — `tmux new-session -d -s warroom-<name> -x 200 -y 50`
 3. **Configure session** — `tmux set-option -t <session> mouse on`, history-limit 10000
 4. **Start Claude Code** — `cd <directory> && claude --model <model> [--dangerously-skip-permissions]`
-5. **Wait for ready** — poll tmux pane for Claude Code idle indicators (up to 30s)
+5. **Wait for ready** — poll tmux pane for Claude Code idle indicators (up to 30s). If timeout, still proceed but mark response with `"warning": "Agent may still be starting — startup injection sent to a potentially busy terminal"`
 6. **Inject startup** — send: `Read ~/coders-war-room/startup.md then follow these instructions: <initial_prompt>`
-7. **Add to runtime roster** — agent added to in-memory AGENTS list, agent_membership set to True
+7. **Add to runtime roster** — agent added to in-memory AGENTS list, AGENT_NAMES, AGENT_SESSIONS, agent_membership set to True. Marked as `dynamic: true`.
 8. **Announce** — post system message: `<name> has joined the war room`
 9. **Broadcast** — push agent_status update to all WebSocket clients
 
@@ -161,11 +161,18 @@ Read ~/coders-war-room/startup.md then follow these instructions:
 [initial_prompt from the form]
 ```
 
+If `initial_prompt` is empty, the injection is still sent as just:
+```
+Read ~/coders-war-room/startup.md — you are now in the War Room. Acknowledge with your name and role, then wait for instructions.
+```
+
+This ensures every agent reads the protocol even if no task is assigned yet.
+
 The `startup.md` (to be drafted later) will contain:
 - War room protocol (message prefixes, when to respond)
 - Available warroom.sh commands
-- MCP server inventory
-- Plugin capabilities
+- MCP server inventory and plugin capabilities
+- Git-agent protocol: all agents must know to post git requests to git-agent, never run destructive git commands directly, and wait for git-agent's plan+confirm workflow
 - Shared conventions
 
 ---
@@ -174,10 +181,24 @@ The `startup.md` (to be drafted later) will contain:
 
 Dynamic agents (created via web UI) exist **in memory only**. They are NOT written to config.yaml.
 
-This means:
-- Server restart loses the dynamic agent roster (tmux sessions survive, but the server forgets them)
-- The agent can be re-discovered by scanning tmux sessions on startup (future enhancement)
-- config.yaml remains the "permanent" roster; dynamic agents are ephemeral
+### Reconciliation on Server Startup
+
+On boot, the server runs a reconciliation scan:
+1. Load permanent agents from `config.yaml` (as today)
+2. Run `tmux list-sessions` and find all sessions prefixed with `warroom-`
+3. For any session NOT in config.yaml, add it to the in-memory roster as a dynamic agent with:
+   - `name`: derived from session name (strip `warroom-` prefix)
+   - `role`: "Dynamic agent (recovered)"
+   - `presence`: detected via `get_agent_activity()`
+4. This means server restarts no longer orphan dynamic agents — they're automatically re-adopted
+
+### Permanent vs Dynamic Distinction
+
+Agents from config.yaml are **permanent** (survive server restarts, have full role descriptions). Agents created via the web UI are **dynamic** (recovered on restart but with minimal metadata).
+
+The web UI sidebar distinguishes these visually:
+- Permanent agents: normal display
+- Dynamic agents: a small `~` indicator next to the name (meaning "ephemeral/dynamic")
 
 **In-memory state changes:**
 - `AGENTS` list gets a new entry appended
