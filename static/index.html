@@ -83,8 +83,10 @@
     flex-shrink: 0;
   }
 
-  .agent-dot.online { background: #3fb950; box-shadow: 0 0 4px #3fb95066; }
-  .agent-dot.offline { background: #484f58; }
+  .agent-dot.active { background: #3fb950; box-shadow: 0 0 4px #3fb95066; }
+  .agent-dot.busy { background: #d29922; box-shadow: 0 0 4px #d2992266; }
+  .agent-dot.session { background: #484f58; }
+  .agent-dot.offline { background: #f85149; opacity: 0.5; }
 
   .chat-container {
     flex: 1;
@@ -340,23 +342,27 @@ function renderAgentList() {
   const gurvDiv = document.createElement('div');
   gurvDiv.className = 'agent-item';
   gurvDiv.innerHTML = `
-    <span class="agent-dot online"></span>
+    <span class="agent-dot active"></span>
     <span class="agent-name" style="color: ${getColor('gurvinder')}">gurvinder</span>
   `;
   gurvDiv.onclick = () => { targetSelect.value = 'all'; msgInput.focus(); };
   agentList.appendChild(gurvDiv);
 
   // Agents from roster (fetched from API)
+  // agentStatus values: "active" | "busy" | "session" | "offline" (or legacy true/false)
   agentRoster.forEach(agent => {
-    const isOnline = !!agentStatus[agent.name];
+    const raw = agentStatus[agent.name];
+    // Support both new string presence and legacy boolean
+    const presence = (raw === true) ? 'active' : (raw === false) ? 'offline' : (raw || 'offline');
     const label = shortRole(agent.role);
+    const presenceLabel = {active: 'idle', busy: 'working', session: 'no claude', offline: 'offline'}[presence] || '';
     const div = document.createElement('div');
     div.className = 'agent-item';
     div.innerHTML = `
-      <span class="agent-dot ${isOnline ? 'online' : 'offline'}"></span>
+      <span class="agent-dot ${presence}"></span>
       <span style="display:flex;flex-direction:column;gap:1px">
         <span class="agent-name" style="color: ${getColor(agent.name)}">${agent.name}</span>
-        ${label ? `<span style="font-size:10px;color:#8b949e">${label}</span>` : ''}
+        ${label ? `<span style="font-size:10px;color:#8b949e">${label}${presenceLabel ? ' · ' + presenceLabel : ''}</span>` : ''}
       </span>
     `;
     div.onclick = () => { targetSelect.value = agent.name; msgInput.focus(); };

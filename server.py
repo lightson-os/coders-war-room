@@ -109,22 +109,40 @@ def tmux_session_exists(session_name: str) -> bool:
 
 
 def check_agent_ready(session_name: str) -> bool:
-    """Check if Claude Code is at its input prompt by inspecting the tmux pane."""
+    """Check if Claude Code is at its input prompt by inspecting the tmux pane.
+
+    Claude Code's TUI shows these indicators when idle/waiting for input:
+      - '❯' (U+276F) — the input prompt character
+      - '>' (ASCII) — fallback for older versions
+    When busy, the pane shows spinner text, tool output, or thinking indicators.
+    """
     try:
         result = subprocess.run(
-            ["tmux", "capture-pane", "-t", session_name, "-p", "-S", "-5"],
+            ["tmux", "capture-pane", "-t", session_name, "-p", "-S", "-15"],
             capture_output=True,
             text=True,
             timeout=2,
         )
         if result.returncode != 0:
             return False
-        lines = result.stdout.strip().split("\n")
-        for line in reversed(lines[-3:]):
+        content = result.stdout
+        # Look for Claude Code's idle prompt character anywhere in recent output
+        # The ❯ character appears on its own line when waiting for input
+        if "\u276f" in content:  # ❯
+            # But also check we're NOT in the middle of output —
+            # if there's a spinner (⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏) or "Thinking" indicator, agent is busy
+            busy_indicators = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "Thinking"]
+            last_lines = content.strip().split("\n")[-5:]
+            for line in last_lines:
+                for indicator in busy_indicators:
+                    if indicator in line:
+                        return False
+            return True
+        # Fallback: plain > prompt
+        lines = content.strip().split("\n")
+        for line in reversed(lines[-5:]):
             stripped = line.strip()
-            if not stripped:
-                continue
-            if stripped.endswith(">") or stripped == ">":
+            if stripped == ">" or stripped.endswith("> "):
                 return True
         return False
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -233,11 +251,38 @@ async def flush_queues_loop():
             send_to_tmux(session, text)
 
 
+def get_agent_presence(session_name: str) -> str:
+    """Return agent presence: 'active' (Claude Code idle), 'busy' (Claude Code working), 'session' (tmux exists but no Claude), 'offline'."""
+    if not tmux_session_exists(session_name):
+        return "offline"
+    try:
+        result = subprocess.run(
+            ["tmux", "capture-pane", "-t", session_name, "-p", "-S", "-15"],
+            capture_output=True, text=True, timeout=2,
+        )
+        if result.returncode != 0:
+            return "session"
+        content = result.stdout
+        # Check if Claude Code is running at all (look for its UI elements)
+        if "\u276f" not in content and "Claude Code" not in content:
+            return "session"  # tmux exists but no Claude Code
+        # Check if busy
+        busy_indicators = ["\u280b", "\u2819", "\u2839", "\u2838", "\u283c", "\u2834", "\u2826", "\u2827", "\u2807", "\u280f", "Thinking"]
+        last_lines = content.strip().split("\n")[-5:]
+        for line in last_lines:
+            for indicator in busy_indicators:
+                if indicator in line:
+                    return "busy"
+        return "active"
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return "session"
+
+
 async def agent_status_loop():
-    """Background: push agent online/offline status to web clients every 5s."""
+    """Background: push agent presence to web clients every 5s."""
     while True:
         await asyncio.sleep(5)
-        status = {a["name"]: tmux_session_exists(a["tmux_session"]) for a in AGENTS}
+        status = {a["name"]: get_agent_presence(a["tmux_session"]) for a in AGENTS}
         data = json.dumps({"type": "agent_status", "status": status})
         for client in connected_clients[:]:
             try:
@@ -313,6 +358,7 @@ async def list_agents():
             "name": a["name"],
             "role": a["role"],
             "online": tmux_session_exists(a["tmux_session"]),
+            "presence": get_agent_presence(a["tmux_session"]),
         }
         for a in AGENTS
     ]
@@ -326,7 +372,7 @@ async def websocket_endpoint(ws: WebSocket):
         messages = await get_messages(200)
         await ws.send_text(json.dumps({"type": "history", "messages": messages}))
 
-        status = {a["name"]: tmux_session_exists(a["tmux_session"]) for a in AGENTS}
+        status = {a["name"]: get_agent_presence(a["tmux_session"]) for a in AGENTS}
         await ws.send_text(json.dumps({"type": "agent_status", "status": status}))
 
         while True:

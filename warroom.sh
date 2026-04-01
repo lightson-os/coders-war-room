@@ -70,6 +70,28 @@ except Exception as e:
 "
 }
 
+show_mentions() {
+    local count=50
+    if [ "$1" = "--count" ]; then
+        count="$2"
+    fi
+
+    curl -s "$WARROOM_SERVER/api/messages?limit=$count" | python3 -c "
+import sys, json
+try:
+    agent = '$WARROOM_AGENT'
+    msgs = json.load(sys.stdin)
+    for m in msgs:
+        if m['target'] == agent or m['target'] == 'all':
+            ts = m['timestamp'][:19].replace('T', ' ')
+            tag = f' @{m[\"target\"]}' if m['target'] != 'all' else ''
+            prefix = f'[{ts}]{tag} {m[\"sender\"]}'
+            print(f'{prefix}: {m[\"content\"]}')
+except Exception as e:
+    print(f'Error: {e}', file=sys.stderr)
+"
+}
+
 case "$1" in
     post)
         shift
@@ -79,12 +101,17 @@ case "$1" in
         shift
         show_history "$@"
         ;;
+    mentions)
+        shift
+        show_mentions "$@"
+        ;;
     *)
         echo "Coder's War Room — Agent CLI"
         echo ""
         echo "Usage:"
         echo "  warroom.sh post [--to agent] message   Send a message"
-        echo "  warroom.sh history [--count N]          Show recent messages"
+        echo "  warroom.sh history [--count N]          Show all recent messages"
+        echo "  warroom.sh mentions [--count N]         Show messages for me + @all"
         echo ""
         echo "Agent identity: $WARROOM_AGENT"
         echo "Server: $WARROOM_SERVER"

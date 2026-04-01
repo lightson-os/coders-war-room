@@ -25,8 +25,14 @@ if [ -z "$CURRENT_SESSION" ]; then
     exit 1
 fi
 
-# Rename tmux session so dispatch can find us
+# Check if the target session name is already taken by ANOTHER session
 if [ "$CURRENT_SESSION" != "$TARGET_SESSION" ]; then
+    if tmux has-session -t "$TARGET_SESSION" 2>/dev/null; then
+        echo "WARNING: tmux session '$TARGET_SESSION' already exists (stale from previous run?)"
+        echo "Killing stale session..."
+        tmux kill-session -t "$TARGET_SESSION"
+        sleep 0.5
+    fi
     tmux rename-session -t "$CURRENT_SESSION" "$TARGET_SESSION"
     echo "Renamed tmux session: $CURRENT_SESSION -> $TARGET_SESSION"
 fi
