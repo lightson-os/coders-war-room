@@ -37,15 +37,22 @@ if [ "$CURRENT_SESSION" != "$TARGET_SESSION" ]; then
     echo "Renamed tmux session: $CURRENT_SESSION -> $TARGET_SESSION"
 fi
 
-# Fetch role from server
-ROLE=$(curl -s "$SERVER_URL/api/agents" 2>/dev/null | python3 -c "
+AGENT_INFO=$(curl -s "$SERVER_URL/api/agents" 2>/dev/null | python3 -c "
 import sys, json
 try:
     agents = json.load(sys.stdin)
     match = [a for a in agents if a['name'] == '$AGENT_NAME']
-    print(match[0]['role'] if match else 'Agent')
-except: print('Agent')
-" 2>/dev/null || echo "Agent")
+    if match:
+        a = match[0]
+        print(f\"{a.get('role', 'Agent')}|{a.get('instructions', 'startup.md')}|{a.get('role_type', '$AGENT_NAME')}\")
+    else:
+        print('Agent|startup.md|$AGENT_NAME')
+except: print('Agent|startup.md|$AGENT_NAME')
+" 2>/dev/null || echo "Agent|startup.md|$AGENT_NAME")
+
+ROLE=$(echo "$AGENT_INFO" | cut -d'|' -f1)
+INSTRUCTIONS=$(echo "$AGENT_INFO" | cut -d'|' -f2)
+ROLE_TYPE=$(echo "$AGENT_INFO" | cut -d'|' -f3)
 
 # Announce to war room
 curl -s -X POST "$SERVER_URL/api/messages" \
@@ -58,8 +65,15 @@ cat << EOF
 
 ======================================
   JOINED: $AGENT_NAME
-  ROLE: $ROLE
+  ROLE TYPE: $ROLE_TYPE
+  INSTRUCTIONS: ~/contextualise/docs/$INSTRUCTIONS
 ======================================
+
+STARTUP:
+  1. Read ~/coders-war-room/startup.md
+  2. Read ~/contextualise/docs/$INSTRUCTIONS
+  3. Read ~/contextualise/CLAUDE.md
+  4. Run: ~/coders-war-room/warroom.sh history
 
 WAR ROOM COMMANDS:
   ~/coders-war-room/warroom.sh post "message"

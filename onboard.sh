@@ -52,12 +52,16 @@ for a in agents:
     # If specific agents requested, include them regardless of auto_onboard
     if filter_names:
         if a['name'] in filter_names:
-            print(f\"{a['name']}|{a['tmux_session']}|{a['role']}\")
+            instr = a.get('instructions', 'startup.md')
+            rtype = a.get('role_type', a['name'])
+            print(f\"{a['name']}|{a['tmux_session']}|{a['role']}|{instr}|{rtype}\")
     else:
         # No filter: respect auto_onboard (default True)
         auto = a.get('auto_onboard', True)
         if auto or include_manual:
-            print(f\"{a['name']}|{a['tmux_session']}|{a['role']}\")
+            instr = a.get('instructions', 'startup.md')
+            rtype = a.get('role_type', a['name'])
+            print(f\"{a['name']}|{a['tmux_session']}|{a['role']}|{instr}|{rtype}\")
         else:
             import sys as s
             print(f\"  Skipping {a['name']} (auto_onboard: false — use join.sh or --all)\", file=s.stderr)
@@ -112,6 +116,8 @@ onboard_agent() {
     local name="$1"
     local session="$2"
     local role="$3"
+    local instructions="${4:-startup.md}"
+    local role_type="${5:-$name}"
 
     echo ""
     echo "=== Onboarding: $name ==="
@@ -169,10 +175,10 @@ onboard_agent() {
     # Generate onboarding prompt from template
     local template_file="$SCRIPT_DIR/onboarding-prompt.md"
     local onboard_file="/tmp/warroom-onboard-${name}.md"
-    sed "s/{{AGENT_NAME}}/$name/g; s|{{AGENT_ROLE}}|$role|g" "$template_file" > "$onboard_file"
+    sed "s/{{AGENT_NAME}}/$name/g; s|{{AGENT_ROLE}}|$role|g; s/{{INSTRUCTIONS_FILE}}/$instructions/g; s/{{ROLE_TYPE}}/$role_type/g" "$template_file" > "$onboard_file"
 
     # Inject onboarding via file read command (safer than paste-buffer)
-    tmux set-buffer -b warroom-onboard "Read the onboarding instructions at $onboard_file and follow them exactly — all 4 steps. Start with Step 1: confirm you have read the 4 core files."
+    tmux set-buffer -b warroom-onboard "Read the onboarding instructions at $onboard_file and follow the startup sequence. Start with Step 1: read your operating manuals."
     tmux paste-buffer -b warroom-onboard -t "$session"
     sleep 0.5
     tmux send-keys -t "$session" Enter
@@ -222,8 +228,8 @@ if ! curl -s "$SERVER_URL/api/agents" > /dev/null 2>&1; then
 fi
 
 FILTER="${POSITIONAL[*]}"
-while IFS='|' read -r name session role; do
-    onboard_agent "$name" "$session" "$role"
+while IFS='|' read -r name session role instructions role_type; do
+    onboard_agent "$name" "$session" "$role" "$instructions" "$role_type"
 done < <(get_agents "$FILTER" "$INCLUDE_MANUAL")
 
 echo ""
