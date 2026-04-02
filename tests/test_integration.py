@@ -8,42 +8,42 @@ Note: Requires tmux to be installed. Creates temporary tmux sessions.
 import json
 import os
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
 import pytest
 import httpx
 
-SERVER_URL = "http://localhost:5680"
+SERVER_URL = "http://localhost:5681"
 PROJECT_DIR = Path(__file__).parent.parent
 TEST_SESSION = "warroom-test-agent"
 
 
 @pytest.fixture(scope="module", autouse=True)
 def server():
-    """Start the war room server for the test suite."""
-    # Kill any existing server on port 5680
-    subprocess.run(["pkill", "-f", "python3.*server.py"], capture_output=True)
-    time.sleep(1)
-
-    # Remove test DB if exists
-    db_path = PROJECT_DIR / "warroom.db"
-    if db_path.exists():
-        db_path.unlink()
+    """Start an isolated test server on port 5681 — never touches the live server."""
+    test_db = Path(tempfile.mktemp(suffix=".db"))
 
     proc = subprocess.Popen(
-        ["python3", str(PROJECT_DIR / "server.py")],
-        cwd=str(PROJECT_DIR),
+        ["python3", "-c", "\n".join([
+            "import sys, os",
+            f"sys.path.insert(0, '{Path(__file__).parent.parent}')",
+            "import server",
+            "server.PORT = 5681",
+            f"server.DB_PATH = __import__('pathlib').Path('{test_db}')",
+            "import uvicorn",
+            "uvicorn.run(server.app, host='0.0.0.0', port=5681, log_level='error')",
+        ])],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    time.sleep(2)  # Wait for server to start
+    time.sleep(3)
     yield proc
     proc.terminate()
     proc.wait(timeout=5)
-    # Clean up DB
-    if db_path.exists():
-        db_path.unlink()
+    if test_db.exists():
+        test_db.unlink()
 
 
 @pytest.fixture(autouse=True)
@@ -79,7 +79,7 @@ def test_post_and_retrieve_message():
 
 def test_cli_post():
     """Post a message via warroom.sh CLI."""
-    env = {**os.environ, "WARROOM_AGENT_NAME": "phase-2"}
+    env = {**os.environ, "WARROOM_AGENT_NAME": "phase-2", "WARROOM_SERVER_URL": SERVER_URL}
     result = subprocess.run(
         [str(PROJECT_DIR / "warroom.sh"), "post", "CLI test message"],
         capture_output=True,
@@ -102,7 +102,7 @@ def test_cli_history():
         "content": "History test marker",
     })
 
-    env = {**os.environ, "WARROOM_AGENT_NAME": "test"}
+    env = {**os.environ, "WARROOM_AGENT_NAME": "test", "WARROOM_SERVER_URL": SERVER_URL}
     result = subprocess.run(
         [str(PROJECT_DIR / "warroom.sh"), "history", "--count", "10"],
         capture_output=True,
