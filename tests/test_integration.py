@@ -120,9 +120,9 @@ def test_agent_list():
     agents = resp.json()
     names = [a["name"] for a in agents]
     assert "supervisor" in names
-    assert "phase-1" in names
+    assert "engineer-1" in names
     assert "git-agent" in names
-    assert len(agents) >= 8
+    assert len(agents) >= 7
 
 
 def test_message_truncation_endpoint():
@@ -217,16 +217,6 @@ def test_status_flow():
     assert data["task"] is None
 
 
-def test_ownership_api():
-    """Test that ownership patterns are resolved."""
-    resp = httpx.get(f"{SERVER_URL}/api/agents/phase-1/owns")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["agent"] == "phase-1"
-    assert isinstance(data["patterns"], list)
-    assert isinstance(data["resolved"], list)
-
-
 def test_files_api():
     """Test the files listing endpoint."""
     resp = httpx.get(f"{SERVER_URL}/api/files?path=.")
@@ -234,20 +224,6 @@ def test_files_api():
     data = resp.json()
     assert "entries" in data
     assert len(data["entries"]) > 0
-    dirs = [e for e in data["entries"] if e["type"] == "dir" and e["name"] == "northstar"]
-    assert len(dirs) == 1
-    assert dirs[0]["has_owned"] is True
-
-
-def test_files_ownership():
-    """Test that files show correct ownership."""
-    resp = httpx.get(f"{SERVER_URL}/api/files?path=northstar")
-    assert resp.status_code == 200
-    data = resp.json()
-    state = [e for e in data["entries"] if e["name"] == "state.py"]
-    if state:
-        assert state[0]["owner"] == "phase-1"
-        assert state[0]["color"] is not None
 
 
 def test_files_security():

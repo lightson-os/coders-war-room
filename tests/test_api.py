@@ -71,9 +71,9 @@ async def test_get_agents():
         agents = resp.json()
         names = [a["name"] for a in agents]
         assert "supervisor" in names
-        assert "phase-1" in names
+        assert "engineer-1" in names
         assert "git-agent" in names
-        assert len(agents) == 8
+        assert len(agents) == 7
 
 
 @pytest.mark.asyncio
@@ -184,7 +184,7 @@ async def test_set_agent_status():
     from server import app, agent_manual_status
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post("/api/agents/phase-1/status", json={
+        resp = await client.post("/api/agents/engineer-1/status", json={
             "task": "fixing state import",
             "progress": 60,
             "eta": "5m",
@@ -192,19 +192,19 @@ async def test_set_agent_status():
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "updated"
-        assert "phase-1" in agent_manual_status
-        assert agent_manual_status["phase-1"]["task"] == "fixing state import"
-        assert agent_manual_status["phase-1"]["progress"] == 60
+        assert "engineer-1" in agent_manual_status
+        assert agent_manual_status["engineer-1"]["task"] == "fixing state import"
+        assert agent_manual_status["engineer-1"]["progress"] == 60
 
 
 @pytest.mark.asyncio
 async def test_get_agent_status():
     from server import app, agent_manual_status
     import time as t
-    agent_manual_status["phase-2"] = {"task": "test task", "progress": 40, "updated_at": t.time()}
+    agent_manual_status["scout"] = {"task": "test task", "progress": 40, "updated_at": t.time()}
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/agents/phase-2/status")
+        resp = await client.get("/api/agents/scout/status")
         assert resp.status_code == 200
         data = resp.json()
         assert data["task"] == "test task"
@@ -215,25 +215,12 @@ async def test_get_agent_status():
 async def test_clear_agent_status():
     from server import app, agent_manual_status
     import time as t
-    agent_manual_status["phase-3"] = {"task": "old task", "progress": 80, "updated_at": t.time()}
+    agent_manual_status["qa"] = {"task": "old task", "progress": 80, "updated_at": t.time()}
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post("/api/agents/phase-3/status", json={"clear": True})
+        resp = await client.post("/api/agents/qa/status", json={"clear": True})
         assert resp.status_code == 200
-        assert "phase-3" not in agent_manual_status
-
-
-@pytest.mark.asyncio
-async def test_get_agent_owns():
-    from server import app
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/agents/phase-1/owns")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["agent"] == "phase-1"
-        assert "patterns" in data
-        assert "resolved" in data
+        assert "qa" not in agent_manual_status
 
 
 @pytest.mark.asyncio
@@ -241,12 +228,12 @@ async def test_set_blocked_status():
     from server import app, agent_manual_status
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post("/api/agents/phase-3/status", json={
-            "blocked_by": "phase-1",
+        resp = await client.post("/api/agents/qa/status", json={
+            "blocked_by": "engineer-1",
             "blocked_reason": "needs config change",
         })
         assert resp.status_code == 200
-        assert agent_manual_status["phase-3"]["blocked_by"] == "phase-1"
+        assert agent_manual_status["qa"]["blocked_by"] == "engineer-1"
 
 
 @pytest.mark.asyncio
@@ -267,42 +254,12 @@ async def test_list_files_root():
 
 
 @pytest.mark.asyncio
-async def test_list_files_with_ownership():
-    from server import app
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/files?path=northstar")
-        assert resp.status_code == 200
-        data = resp.json()
-        owned = [e for e in data["entries"] if e.get("owner")]
-        assert len(owned) > 0
-        for e in owned:
-            assert e["color"] is not None
-
-
-@pytest.mark.asyncio
 async def test_list_files_security():
     from server import app
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/api/files?path=../../etc")
         assert resp.status_code == 403
-
-
-@pytest.mark.asyncio
-async def test_list_files_dirs_have_owned():
-    import server as srv
-    srv.precompute_dir_ownership()
-    from server import app
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.get("/api/files?path=.")
-        assert resp.status_code == 200
-        data = resp.json()
-        dirs = [e for e in data["entries"] if e["type"] == "dir"]
-        northstar = [d for d in dirs if d["name"] == "northstar"]
-        if northstar:
-            assert northstar[0]["has_owned"] is True
 
 
 @pytest.mark.asyncio
@@ -317,3 +274,28 @@ async def test_dedup_state_tracking():
     assert 50 <= agent_last_seen_id.get("test-agent", 0)
     # A message with ID > 50 should NOT be considered "already seen"
     assert not (51 <= agent_last_seen_id.get("test-agent", 0))
+
+
+@pytest.mark.asyncio
+async def test_server_health():
+    from server import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/server/health")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "uptime_seconds" in data
+        assert "uptime_human" in data
+        assert "launchagent_active" in data
+        assert "agent_count" in data
+
+
+@pytest.mark.asyncio
+async def test_recover_deboarded_refused():
+    from server import app, agent_membership
+    agent_membership["engineer-1"] = False
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/api/agents/engineer-1/recover")
+        assert resp.status_code == 400
+        assert "de-boarded" in resp.json()["error"]
