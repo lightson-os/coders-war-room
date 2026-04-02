@@ -1081,6 +1081,61 @@
 
   .ac:hover .ac-drag-handle { opacity: 1; }
   .ac-drag-handle:active { cursor: grabbing; }
+
+  /* ─── Dead session card ─── */
+  .ac.session-dead {
+    border-color: rgba(255,82,82,0.4);
+    background: rgba(255,82,82,0.03);
+  }
+
+  .ac-dead-warning {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--red);
+    margin-top: 4px;
+    padding-left: 15px;
+  }
+
+  .abtn-recover {
+    color: var(--red);
+    border-color: rgba(255,82,82,0.3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    animation: pulse-recover 2s infinite;
+  }
+  .abtn-recover:hover { background: var(--red-dim); border-color: var(--red); }
+  @keyframes pulse-recover { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* ─── Server bar ─── */
+  .server-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+  }
+  .server-stat { color: var(--text-dim); letter-spacing: 0.5px; }
+  .server-stat-value { color: var(--text-secondary); }
+  .server-la-active { color: var(--green); }
+  .server-la-inactive { color: var(--text-dim); }
+  .server-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .server-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
 </style>
 </head>
 <body>
@@ -1091,8 +1146,14 @@
     <span class="h-sep"></span>
     <span class="h-sub">North Star Daemon</span>
   </div>
-  <span id="connBadge" class="conn off">offline</span>
-  <button id="rollCallBtn" class="conn on" style="cursor:pointer;margin-left:8px" title="Check who's alive">Roll Call</button>
+  <div class="server-bar">
+    <span class="server-stat">uptime: <span id="srvUptime" class="server-stat-value">--</span></span>
+    <span class="server-stat">LaunchAgent: <span id="srvLA" class="server-la-inactive">--</span></span>
+    <button class="server-btn" id="srvRestart" title="Restart server (requires LaunchAgent)">Restart</button>
+    <button class="server-btn" id="srvLogs" title="View server logs">Logs</button>
+    <span id="connBadge" class="conn off">offline</span>
+    <button id="rollCallBtn" class="conn on" style="cursor:pointer" title="Check who's alive">Roll Call</button>
+  </div>
 </header>
 
 <div class="main">
@@ -1248,6 +1309,15 @@ function connect() {
     if (d.type === 'history') { $msgs.innerHTML = ''; lastSender = null; d.messages.forEach(renderMsg); scrollEnd(); }
     else if (d.type === 'message') { renderMsg(d.message); scrollEnd(); }
     else if (d.type === 'agent_status') {
+      if (d.server) {
+        const srvUp = $('srvUptime');
+        const srvLA = $('srvLA');
+        if (srvUp) srvUp.textContent = d.server.uptime || '--';
+        if (srvLA) {
+          srvLA.textContent = d.server.launchagent ? 'active' : 'not installed';
+          srvLA.className = d.server.launchagent ? 'server-la-active' : 'server-la-inactive';
+        }
+      }
       const incoming = d.agents || {};
       // Preserve dynamic flag from previous data
       for (const name in incoming) {
@@ -1376,10 +1446,14 @@ function renderAgents() {
     const lastCommit = d.last_commit || null;
     const isDynamic = a.dynamic || d.dynamic || false;
 
+    const sessionAlive = d.session_alive !== false;
+    const sessionDead = !sessionAlive && presence === 'offline';
+
     if (presence !== 'offline') inCount++;
 
     let cardClass = 'ac';
-    if (blockedBy) cardClass = 'ac blocked-card';
+    if (sessionDead) cardClass = 'ac session-dead';
+    else if (blockedBy) cardClass = 'ac blocked-card';
     else if (stalled) cardClass = 'ac stalled';
 
     const card = document.createElement('div');
@@ -1394,11 +1468,16 @@ function renderAgents() {
     else if (presence === 'typing') stBadge = '<span class="ac-status st-typing">thinking</span>';
     else if (presence === 'offline') stBadge = '<span class="ac-status st-offline">offline</span>';
 
-    const btns = `
-      <button class="abtn abtn-cli" data-action="attach" data-agent="${a.name}" title="Open CLI in Terminal">cli</button>
-      <button class="abtn abtn-msg" data-action="msg" data-agent="${a.name}" title="Direct message">@</button>
-      <button class="abtn abtn-off" data-action="deboard" data-agent="${a.name}" title="De-board from room">x</button>
-    `;
+    let btns = '';
+    if (sessionDead) {
+      btns = `<button class="abtn abtn-recover" data-action="recover" data-agent="${a.name}">Recover</button>`;
+    } else {
+      btns = `
+        <button class="abtn abtn-cli" data-action="attach" data-agent="${a.name}" title="Open CLI in Terminal">cli</button>
+        <button class="abtn abtn-msg" data-action="msg" data-agent="${a.name}" title="Direct message">@</button>
+        <button class="abtn abtn-off" data-action="deboard" data-agent="${a.name}" title="De-board from room">x</button>
+      `;
+    }
 
     let actLine = '';
     if (task) actLine = `<div class="ac-activity">${esc(task)}</div>`;
@@ -1415,6 +1494,9 @@ function renderAgents() {
 
     let stalledHtml = '';
     if (stalled && !blockedBy) stalledHtml = `<div class="ac-stalled-text">${stalledMin}m+ on same file</div>`;
+
+    let deadHtml = '';
+    if (sessionDead) deadHtml = '<div class="ac-dead-warning">\u26A0 Session lost \u2014 click Recover to restart</div>';
 
     let ownsHtml = '';
     if (owns.length > 0) {
@@ -1439,7 +1521,7 @@ function renderAgents() {
         <span class="ac-role" title="${esc(a.role || '')}">${role}</span>
         ${stBadge}
       </div>
-      ${actLine}${progressHtml}${blockerHtml}${stalledHtml}${ownsHtml}${commitHtml}
+      ${actLine}${progressHtml}${blockerHtml}${stalledHtml}${deadHtml}${ownsHtml}${commitHtml}
     `;
 
     // Drag handle for reordering
@@ -1512,6 +1594,14 @@ function renderAgents() {
         if (action === 'attach') fetch(`/api/agents/${agent}/attach`, { method: 'POST' });
         else if (action === 'deboard') fetch(`/api/agents/${agent}/deboard`, { method: 'POST' });
         else if (action === 'msg') { $target.value = agent; $input.focus(); }
+        else if (action === 'recover') {
+          btn.textContent = 'Recovering...';
+          btn.disabled = true;
+          fetch(`/api/agents/${agent}/recover`, { method: 'POST' }).then(r => r.json()).then(d => {
+            btn.textContent = d.status === 'recovered' ? 'Recovered!' : 'Failed';
+            if (d.error) alert(d.error);
+          }).catch(() => { btn.textContent = 'Failed'; });
+        }
       };
     });
 
@@ -1939,6 +2029,16 @@ $input.addEventListener('drop', (e) => {
     $input.selectionStart = $input.selectionEnd = start + filePath.length + 1;
   }
 });
+
+// ═══════════ Server Buttons ═══════════
+$('srvRestart').onclick = async () => {
+  if (!confirm('Restart the server? Agents keep running but dispatch pauses briefly.')) return;
+  try { await fetch('/api/server/restart', { method: 'POST' }); } catch (e) {}
+  $('srvRestart').textContent = 'Restarting...';
+  setTimeout(() => { $('srvRestart').textContent = 'Restart'; }, 5000);
+};
+
+$('srvLogs').onclick = () => { window.open('/api/server/logs', '_blank'); };
 
 // ═══════════ Roll Call ═══════════
 $('rollCallBtn').onclick = async () => {
