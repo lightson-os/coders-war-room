@@ -889,31 +889,6 @@
     margin-right: 4px;
   }
 
-  /* ─── Owned files pills ─── */
-  .ac-owns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-    margin-top: 5px;
-    padding-left: 15px;
-  }
-
-  .ac-own-pill {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 8px;
-    color: var(--text-dim);
-    background: rgba(62,78,100,0.15);
-    padding: 1px 5px;
-    border-radius: 2px;
-  }
-
-  .ac-own-more {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 8px;
-    color: var(--text-dim);
-    padding: 1px 5px;
-    cursor: default;
-  }
 
   /* ─── Last commit ─── */
   .ac-commit {
@@ -1028,20 +1003,12 @@
 
   .fp-item.dir { color: var(--text-secondary); }
   .fp-item.file { color: var(--text-dim); }
-  .fp-item.file.owned { color: var(--text-secondary); }
 
   .fp-arrow {
     font-size: 8px;
     width: 10px;
     text-align: center;
     color: var(--text-dim);
-    flex-shrink: 0;
-  }
-
-  .fp-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
     flex-shrink: 0;
   }
 
@@ -1221,10 +1188,25 @@
       </div>
     </div>
 
-    <!-- Role -->
+    <!-- Role Type -->
     <div class="drawer-field">
-      <label class="drawer-label">Role</label>
-      <input id="dRole" class="drawer-input" type="text" placeholder="What does this agent do?" maxlength="200" autocomplete="off">
+      <label class="drawer-label">Role Type</label>
+      <select id="dRoleType" class="drawer-select">
+        <option value="">Select a role...</option>
+        <option value="supervisor">Supervisor</option>
+        <option value="scout">Scout</option>
+        <option value="engineer">Engineer</option>
+        <option value="qa">QA</option>
+        <option value="git-agent">Git Agent</option>
+        <option value="chronicler">Chronicler</option>
+        <option value="other">Other (custom)</option>
+      </select>
+    </div>
+
+    <!-- Role Description -->
+    <div class="drawer-field">
+      <label class="drawer-label">Role Description</label>
+      <textarea id="dRole" class="drawer-textarea" rows="2" placeholder="Auto-filled from role type, or type custom..."></textarea>
     </div>
 
     <!-- Initial Prompt -->
@@ -1384,16 +1366,18 @@ function renderMsg(m) {
 // ═══════════ Agent Sidebar ═══════════
 const ROLE_MAP = {
   'supervisor': 'Coordinator',
+  'scout': 'Research',
+  'engineer-1': 'Engineer',
+  'engineer-2': 'Engineer',
+  'qa': 'Quality Gate',
   'git-agent': 'Git Ops',
+  'chronicler': 'Observer',
 };
 
 function shortRole(role, name) {
   if (!role) return '';
-  // Check hardcoded short names for non-phase agents
   if (ROLE_MAP[name]) return ROLE_MAP[name];
-  // Extract phase label: "Phase N: Label — ..."
-  const m = role.match(/^Phase \d+[AB]?:\s*([^—–\-\.]+)/);
-  return m ? m[1].trim() : (role.length > 24 ? role.slice(0, 24) + '...' : role);
+  return role.length > 24 ? role.slice(0, 24) + '...' : role;
 }
 
 function renderAgents() {
@@ -1444,7 +1428,6 @@ function renderAgents() {
     const blockedReason = d.blocked_reason || null;
     const stalled = d.stalled || false;
     const stalledMin = d.stalled_minutes || 0;
-    const owns = d.owns || [];
     const lastCommit = d.last_commit || null;
     const isDynamic = a.dynamic || d.dynamic || false;
 
@@ -1500,13 +1483,6 @@ function renderAgents() {
     let deadHtml = '';
     if (sessionDead) deadHtml = '<div class="ac-dead-warning">\u26A0 Session lost \u2014 click Recover to restart</div>';
 
-    let ownsHtml = '';
-    if (owns.length > 0) {
-      const shown = owns.slice(0, 3).map(f => `<span class="ac-own-pill">${esc(f)}</span>`).join('');
-      const more = owns.length > 3 ? `<span class="ac-own-more">+${owns.length - 3}</span>` : '';
-      ownsHtml = `<div class="ac-owns" title="${esc(owns.join(', '))}">${shown}${more}</div>`;
-    }
-
     let commitHtml = '';
     if (lastCommit) commitHtml = `<div class="ac-commit">${esc(lastCommit.hash)} ${esc(lastCommit.message)}</div>`;
 
@@ -1523,7 +1499,7 @@ function renderAgents() {
         <span class="ac-role" title="${esc(a.role || '')}">${role}</span>
         ${stBadge}
       </div>
-      ${actLine}${progressHtml}${blockerHtml}${stalledHtml}${deadHtml}${ownsHtml}${commitHtml}
+      ${actLine}${progressHtml}${blockerHtml}${stalledHtml}${deadHtml}${commitHtml}
     `;
 
     // Drag handle for reordering
@@ -1720,9 +1696,43 @@ $input.addEventListener('input', () => { $input.style.height = 'auto'; $input.st
 $input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 $send.addEventListener('click', send);
 
+// ═══════════ Role Presets ═══════════
+const ROLE_PRESETS = {
+  supervisor: {
+    role: "Strategic brain. Reads Jira, decomposes work into task briefs using Sequential Thinking, assigns to pipeline agents, reviews QA reports, approves merges. Never writes code.",
+    instructions: "SUPERVISOR_INSTRUCTIONS.md",
+    prompt: "Startup: Read docs/PROJECT_STATUS.md for handoff context. Check Jira for current sprint state. Assess what's in each pipeline stage.",
+  },
+  scout: {
+    role: "Research and investigation. Analyses code, maps blast radius, verifies dependencies, produces research ledgers at docs/research/. Works ahead of Engineers. Never writes code.",
+    instructions: "SCOUT_INSTRUCTIONS.md",
+    prompt: "Startup: Check Jira 'Scout Review' column for assignments. Read the story description. Begin research.",
+  },
+  engineer: {
+    role: "Implementation. Receives task brief + research ledger, works in isolated git worktree, follows Superpowers TDD workflow, produces tested code on feature branches.",
+    instructions: "ENGINEER_INSTRUCTIONS.md",
+    prompt: "Startup: Read the task brief from Supervisor. Read the research ledger at docs/research/<STORY-ID>_notes.md. Set up your worktree.",
+  },
+  qa: {
+    role: "Quality gate. Runs full verification suite (pytest, flake8, mypy, bandit). Produces QA reports at docs/qa/. Verdict is PASS or FAIL with evidence. Never writes code.",
+    instructions: "QA_INSTRUCTIONS.md",
+    prompt: "Startup: Check Jira 'QA Review' column. Checkout the feature branch. Run the full verification suite.",
+  },
+  'git-agent': {
+    role: "Persistence backbone. All git operations: commits, branches, merges, cleanup. Six commit points per task. Runs test gate before merge. Never writes code. Never merges without Supervisor approval.",
+    instructions: "GIT_AGENT_INSTRUCTIONS.md",
+    prompt: "Startup: Check for pending commit requests in the war room. Verify branch state with git status.",
+  },
+  chronicler: {
+    role: "Silent observer. Reads War Room, research ledgers, QA reports, git log. Produces weekly learnings at docs/chronicler/. Detects spec drift and regression patterns. Never participates in active pipeline.",
+    instructions: "CHRONICLER_INSTRUCTIONS.md",
+    prompt: "Startup: Read war room history. Check recent git log. Review latest QA reports.",
+  },
+};
+
 // ═══════════ Drawer ═══════════
 const $drawer = $('drawer'), $overlay = $('drawerOverlay');
-const $dName = $('dName'), $dRole = $('dRole'), $dPrompt = $('dPrompt');
+const $dName = $('dName'), $dRoleType = $('dRoleType'), $dRole = $('dRole'), $dPrompt = $('dPrompt');
 const $dModel = $('dModel'), $dSkipPerms = $('dSkipPerms');
 const $btnLaunch = $('btnLaunch'), $drawerErr = $('drawerError');
 const $dirBrowser = $('dirBrowser'), $dirList = $('dirList');
@@ -1737,6 +1747,7 @@ function openDrawer() {
   $overlay.classList.add('open');
   // Reset form
   $dName.value = '';
+  if ($dRoleType) $dRoleType.value = '';
   $dRole.value = '';
   $dPrompt.value = '';
   $dModel.value = 'opus';
@@ -1767,6 +1778,19 @@ $overlay.addEventListener('click', closeDrawer);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $drawer.classList.contains('open')) closeDrawer();
 });
+
+// ─── Role type preset handler ───
+$dRoleType.onchange = () => {
+  const rt = $dRoleType.value;
+  const preset = ROLE_PRESETS[rt];
+  if (preset) {
+    $dRole.value = preset.role;
+    $dPrompt.value = preset.prompt;
+  } else if (rt === 'other' || rt === '') {
+    $dRole.value = '';
+    $dPrompt.value = '';
+  }
+};
 
 // ─── Name auto-format ───
 $dName.addEventListener('input', () => {
@@ -1855,6 +1879,10 @@ $btnLaunch.addEventListener('click', async () => {
   $btnLaunch.disabled = true;
   $btnLaunch.textContent = 'CREATING...';
 
+  const roleType = $dRoleType ? $dRoleType.value : 'other';
+  const preset = ROLE_PRESETS[roleType];
+  const instructions = preset ? preset.instructions : '';
+
   try {
     const res = await fetch('/api/agents/create', {
       method: 'POST',
@@ -1863,6 +1891,8 @@ $btnLaunch.addEventListener('click', async () => {
         name: name,
         directory: directory,
         role: role,
+        role_type: roleType,
+        instructions: instructions,
         initial_prompt: $dPrompt.value.trim(),
         model: $dModel.value,
         skip_permissions: $dSkipPerms.checked,
@@ -1934,7 +1964,7 @@ async function loadDir(path, depth, parentEl, autoExpand) {
 
       if (entry.type === 'dir') {
         item.className = 'fp-item dir';
-        const isExpanded = autoExpand && entry.has_owned;
+        const isExpanded = autoExpand && depth === 0;
         item.innerHTML = `
           <span class="fp-arrow">${isExpanded ? '▾' : '▸'}</span>
           <span class="fp-name">${esc(entry.name)}</span>
@@ -1965,13 +1995,9 @@ async function loadDir(path, depth, parentEl, autoExpand) {
         };
 
       } else {
-        const isOwned = !!entry.owner;
-        item.className = `fp-item file${isOwned ? ' owned' : ''}`;
+        item.className = 'fp-item file';
         item.draggable = true;
-        const dot = entry.color
-          ? `<span class="fp-dot" style="background:${entry.color};box-shadow:0 0 4px ${entry.color}44" title="${esc(entry.owner)}"></span>`
-          : '<span style="width:6px"></span>';
-        item.innerHTML = `${dot}<span class="fp-name">${esc(entry.name)}</span>`;
+        item.innerHTML = `<span class="fp-name">${esc(entry.name)}</span>`;
 
         item.onclick = (e) => {
           e.stopPropagation();

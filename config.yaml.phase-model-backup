@@ -1,0 +1,87 @@
+port: 5680
+project_path: ~/contextualise
+
+agents:
+  - name: supervisor
+    role: "Oversees all 6 North Star phases, coordinates cross-phase wiring and bug fixes, resolves conflicts between phase agents, maintains the big picture of daemon integration"
+    tmux_session: warroom-supervisor
+    auto_onboard: false
+    owns: []
+
+  - name: phase-1
+    role: "Phase 1: Foundation — owns supervisor.py, config.py, state.py, safety.py, telegram_bot.py, monitor.py. Responsible for daemon skeleton, config loading, SQLite DatabaseManager, action registry, bash classifier, rate limiter, Telegram bot, health monitor, LaunchAgent plist."
+    tmux_session: warroom-phase-1
+    owns:
+      - "northstar/supervisor.py"
+      - "northstar/config.py"
+      - "northstar/state.py"
+      - "northstar/safety.py"
+      - "northstar/telegram_bot.py"
+      - "northstar/monitor.py"
+
+  - name: phase-2
+    role: "Phase 2: Scheduled Tasks — owns retry.py, tools/hindsight.py, tools/accession.py, reasoning.py, sweep_engine.py, master_run.py, scheduler.py. Responsible for retry engine, Hindsight API wrapper, document accession pipeline, two-tier reasoning (Haiku+Opus), sweep engine (Gmail/WhatsApp/iMessage/Notes), master run orchestrator, APScheduler cron jobs."
+    tmux_session: warroom-phase-2
+    owns:
+      - "northstar/retry.py"
+      - "northstar/tools/*"
+      - "northstar/reasoning.py"
+      - "northstar/sweep_engine.py"
+      - "northstar/master_run.py"
+      - "northstar/scheduler.py"
+
+  - name: phase-3
+    role: "Phase 3: Heartbeat Cycle — owns tier0.py, context_assembly.py, composition.py, drafts.py, deferral.py, interaction.py, session.py, dock.py, heartbeat.py. Responsible for Tier 0 pulse engine, context tiers 1-3, heartbeat message composition, draft-first actions, 4-tier deferral escalation, interaction heuristics, session semaphore, HB7 day summary dock."
+    tmux_session: warroom-phase-3
+    owns:
+      - "northstar/tier0.py"
+      - "northstar/context_assembly.py"
+      - "northstar/composition.py"
+      - "northstar/drafts.py"
+      - "northstar/deferral.py"
+      - "northstar/interaction.py"
+      - "northstar/session.py"
+      - "northstar/dock.py"
+      - "northstar/heartbeat.py"
+
+  - name: phase-4
+    role: "Phase 4: Intelligence — owns targeted_query.py, watchlist.py, dirty_flags.py, proactive.py, quality_audit.py, kpi.py. Responsible for targeted query engine, watchlist monitor, mental model dirty flags, deadline warnings, Thinker Problem coaching, weekly quality audit, KPI tracker, confidence analytics, dashboard."
+    tmux_session: warroom-phase-4
+    owns:
+      - "northstar/targeted_query.py"
+      - "northstar/watchlist.py"
+      - "northstar/dirty_flags.py"
+      - "northstar/proactive.py"
+      - "northstar/quality_audit.py"
+      - "northstar/kpi.py"
+
+  - name: phase-5
+    role: "Phase 5: Polish & Hardening — owns approval.py, headless.py, health_endpoint.py, document_handler.py, simulation.py, cost_tracker.py, maintenance.py. Responsible for IMPACT approval workflow, IDE handover, headless fallback clients, health endpoint (port 9999), emergency stop, document filing pipeline, cost tracker ($8 warn/$10 stop), simulation mode, maintenance manager."
+    tmux_session: warroom-phase-5
+    owns:
+      - "northstar/approval.py"
+      - "northstar/headless.py"
+      - "northstar/health_endpoint.py"
+      - "northstar/document_handler.py"
+      - "northstar/simulation.py"
+      - "northstar/cost_tracker.py"
+      - "northstar/maintenance.py"
+
+  - name: phase-6
+    role: "Phase 6: Skill Framework (6A+6B) — owns skill_manifest.py, skill_evaluator.py, skill_generator.py, skill_discovery.py, skill_engine.py, skill_executor.py, skill_detector.py, skill_observer.py, plus compile.py mods and 4 starter skills (monthly-invoicing, document-filing, sweep-processing, visa-status-check). Responsible for skill compilation, engine harness, discovery, execution, pattern detection, observer, and all skill definitions."
+    tmux_session: warroom-phase-6
+    owns:
+      - "skill_manifest.py"
+      - "skill_evaluator.py"
+      - "skill_generator.py"
+      - "northstar/skill_discovery.py"
+      - "northstar/skill_engine.py"
+      - "northstar/skill_executor.py"
+      - "northstar/skill_detector.py"
+      - "northstar/skill_observer.py"
+      - "skills/**"
+
+  - name: git-agent
+    role: "Handles all git operations: commits, branches, PRs, conflict resolution. NEVER execute git commands without posting plan to the war room and receiving explicit confirmation from gurvinder or supervisor first. Always post a diff summary before committing. Never force-push without gurvinder's confirmation. Never commit directly to main."
+    tmux_session: warroom-git-agent
+    owns: []
