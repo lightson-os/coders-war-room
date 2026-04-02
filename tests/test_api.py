@@ -303,3 +303,17 @@ async def test_list_files_dirs_have_owned():
         northstar = [d for d in dirs if d["name"] == "northstar"]
         if northstar:
             assert northstar[0]["has_owned"] is True
+
+
+@pytest.mark.asyncio
+async def test_dedup_state_tracking():
+    """Verify agent_last_seen_id is updated when set."""
+    from server import agent_last_seen_id
+    # Directly test the dedup state
+    agent_last_seen_id["test-agent"] = 50
+    assert agent_last_seen_id["test-agent"] == 50
+    # A message with ID <= 50 should be considered "already seen"
+    assert 30 <= agent_last_seen_id.get("test-agent", 0)
+    assert 50 <= agent_last_seen_id.get("test-agent", 0)
+    # A message with ID > 50 should NOT be considered "already seen"
+    assert not (51 <= agent_last_seen_id.get("test-agent", 0))

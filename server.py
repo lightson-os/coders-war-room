@@ -73,6 +73,9 @@ agent_last_state: dict[str, dict] = {}
 agent_owns_resolved: dict[str, list[str]] = {}
 agent_last_commit: dict[str, dict] = {}
 
+# Dedup: last message ID dispatched to each agent
+agent_last_seen_id: dict[str, int] = {}
+
 STATUS_TTL_SECONDS = 1800  # 30 minutes
 STALE_THRESHOLD_SECONDS = 300  # 5 minutes
 STALE_EXEMPT_TOOLS = {"Read", "Bash", "WebFetch", "WebSearch", "Agent"}
@@ -413,6 +416,16 @@ def send_to_tmux(session_name: str, text: str):
         pass
 
 
+async def init_dedup_ids():
+    """On boot, set all agents' last-seen to the latest message ID (prevents replay)."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("SELECT MAX(id) FROM messages")
+        row = await cursor.fetchone()
+        latest_id = row[0] or 0
+    for a in AGENTS:
+        agent_last_seen_id.setdefault(a["name"], latest_id)
+
+
 async def dispatch_to_agents(msg: dict):
     """Dispatch a message to all agents that are in the war room, except the sender."""
     for agent in AGENTS:
@@ -425,6 +438,11 @@ async def dispatch_to_agents(msg: dict):
         if not agent_membership.get(name, False):
             continue
 
+        # Dedup: skip if agent already saw this message
+        msg_id = msg.get("id", 0)
+        if msg_id and msg_id <= agent_last_seen_id.get(name, 0):
+            continue
+
         if not tmux_session_exists(session):
             continue
 
@@ -434,9 +452,11 @@ async def dispatch_to_agents(msg: dict):
                 queued = agent_queues.pop(name)
                 for queued_msg in queued:
                     send_to_tmux(session, format_message_for_tmux(queued_msg))
+                    agent_last_seen_id[name] = queued_msg.get("id", 0)
                     await asyncio.sleep(0.3)
             # Then deliver the current message
             send_to_tmux(session, format_message_for_tmux(msg))
+            agent_last_seen_id[name] = msg.get("id", 0)
         else:
             if name not in agent_queues:
                 agent_queues[name] = []
@@ -462,8 +482,13 @@ async def flush_queues_loop():
                 continue
 
             messages = agent_queues.pop(name)
+            # Dedup: filter already-seen messages
+            messages = [m for m in messages if m.get("id", 0) > agent_last_seen_id.get(name, 0)]
+            if not messages:
+                continue
             for queued_msg in messages:
                 send_to_tmux(session, format_message_for_tmux(queued_msg))
+                agent_last_seen_id[name] = queued_msg.get("id", 0)
                 await asyncio.sleep(0.3)
 
 
@@ -598,6 +623,7 @@ async def broadcast_ws(data: dict, exclude: Optional[WebSocket] = None):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await init_dedup_ids()
     reconcile_tmux_sessions()  # Adopt orphaned sessions on boot
     resolve_ownership()
     precompute_dir_ownership()
