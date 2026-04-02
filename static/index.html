@@ -1092,6 +1092,7 @@
     <span class="h-sub">North Star Daemon</span>
   </div>
   <span id="connBadge" class="conn off">offline</span>
+  <button id="rollCallBtn" class="conn on" style="cursor:pointer;margin-left:8px" title="Check who's alive">Roll Call</button>
 </header>
 
 <div class="main">
@@ -1938,6 +1939,22 @@ $input.addEventListener('drop', (e) => {
     $input.selectionStart = $input.selectionEnd = start + filePath.length + 1;
   }
 });
+
+// ═══════════ Roll Call ═══════════
+$('rollCallBtn').onclick = async () => {
+  const btn = $('rollCallBtn');
+  btn.textContent = 'Calling...';
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/api/roll-call', { method: 'POST' });
+    const data = await resp.json();
+    btn.textContent = `${data.responded.length}/${data.total} alive`;
+    setTimeout(() => { btn.textContent = 'Roll Call'; btn.disabled = false; }, 5000);
+  } catch (e) {
+    btn.textContent = 'Roll Call';
+    btn.disabled = false;
+  }
+};
 
 // ═══════════ Init ═══════════
 fetch('/api/agents').then(r => r.json()).then(agents => {

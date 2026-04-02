@@ -217,6 +217,25 @@ if d.get('last_commit'): print(f\"Commit:   {d['last_commit']['hash']} {d['last_
     echo "Status updated"
 }
 
+roll_call() {
+    echo "Roll call sent. Waiting 10s for responses..."
+    local result
+    result=$(curl -s -X POST "$WARROOM_SERVER/api/roll-call" --max-time 15)
+    echo "$result" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    total = d.get('total', 0)
+    responded = d.get('responded', [])
+    missing = d.get('missing', [])
+    print(f\"{len(responded)}/{total} responded: {', '.join(responded) if responded else 'none'}\")
+    if missing:
+        print(f\"Missing: {', '.join(missing)}\")
+except Exception as e:
+    print(f'Error: {e}', file=sys.stderr)
+"
+}
+
 case "$1" in
     post)
         shift
@@ -241,6 +260,10 @@ case "$1" in
     reboard)
         shift
         reboard_agent "$@"
+        ;;
+    roll-call)
+        shift
+        roll_call
         ;;
     attach)
         shift
@@ -286,7 +309,8 @@ LAUNCH_EOF
         echo "  warroom.sh status --unblocked                       Clear blocker"
         echo "  warroom.sh status --clear                           Clear all status"
         echo "  warroom.sh status --show                            Show your card"
-        echo "  warroom.sh deboard [agent]               Leave war room (keep working)"
+        echo "  warroom.sh roll-call                         Check who's alive
+  warroom.sh deboard [agent]               Leave war room (keep working)"
         echo "  warroom.sh reboard [agent]               Rejoin the war room"
         echo "  warroom.sh attach <agent>                Pop out agent in Terminal.app"
         echo ""

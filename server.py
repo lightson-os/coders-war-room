@@ -821,6 +821,39 @@ async def preview_markdown(file_path: str):
     return HTMLResponse(page)
 
 
+@app.post("/api/roll-call")
+async def roll_call():
+    """Broadcast a roll call, wait 10s, report who responded."""
+    before_ts = datetime.now(timezone.utc).isoformat()
+    saved = await save_message("system", "all", "[ROLL CALL] All agents, report in.", "system")
+    await broadcast_ws({"type": "message", "message": saved})
+    await dispatch_to_agents(saved)
+
+    in_room = [a["name"] for a in AGENTS if agent_membership.get(a["name"], False)]
+    await asyncio.sleep(10)
+
+    responded = set()
+    messages = await get_messages(50)
+    for m in messages:
+        if m["timestamp"] >= before_ts and m["sender"] in in_room and m["type"] == "message":
+            responded.add(m["sender"])
+
+    missing = [name for name in in_room if name not in responded]
+    responded_list = sorted(responded)
+    missing_list = sorted(missing)
+
+    summary = f"[ROLL CALL] {len(responded_list)}/{len(in_room)} responded"
+    if responded_list:
+        summary += f": {', '.join(responded_list)}"
+    if missing_list:
+        summary += f". Missing: {', '.join(missing_list)}"
+
+    result_msg = await save_message("system", "all", summary, "system")
+    await broadcast_ws({"type": "message", "message": result_msg})
+
+    return {"responded": responded_list, "missing": missing_list, "total": len(in_room)}
+
+
 @app.post("/api/agents/{agent_name}/status")
 async def set_agent_status(agent_name: str, body: AgentStatus):
     """Set manual status for an agent."""
