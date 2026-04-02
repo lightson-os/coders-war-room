@@ -723,7 +723,7 @@ async def list_files(path: str = "."):
 
 @app.post("/api/files/open")
 async def open_file(data: dict):
-    """Open a file in the system default editor."""
+    """Open a file — markdown renders in browser, others open in system default."""
     file_path = data.get("path", "")
     full_path = (Path(PROJECT_PATH) / file_path).resolve()
     project_resolved = Path(PROJECT_PATH).resolve()
@@ -732,11 +732,54 @@ async def open_file(data: dict):
     if not full_path.is_file():
         return JSONResponse({"error": "File not found"}, status_code=404)
     try:
-        # Use macOS 'open' to launch in default editor (VS Code, etc.)
-        subprocess.run(["open", str(full_path)], capture_output=True, timeout=5)
-        return {"status": "opened", "path": file_path}
+        ext = full_path.suffix.lower()
+        if ext in (".md", ".markdown"):
+            # Markdown: return URL for browser preview
+            rel = str(full_path.relative_to(project_resolved))
+            return {"status": "preview", "url": f"/preview/{rel}", "path": file_path}
+        else:
+            subprocess.run(["open", str(full_path)], capture_output=True, timeout=5)
+            return {"status": "opened", "path": file_path}
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.get("/preview/{file_path:path}")
+async def preview_markdown(file_path: str):
+    """Render a markdown file as styled HTML."""
+    import markdown as md
+    full_path = (Path(PROJECT_PATH) / file_path).resolve()
+    project_resolved = Path(PROJECT_PATH).resolve()
+    if not str(full_path).startswith(str(project_resolved)):
+        return PlainTextResponse("Forbidden", status_code=403)
+    if not full_path.is_file():
+        return PlainTextResponse("Not found", status_code=404)
+    raw = full_path.read_text(errors="replace")
+    html_content = md.markdown(raw, extensions=["tables", "fenced_code", "codehilite"])
+    page = f"""<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>{full_path.name}</title>
+<style>
+  body {{ font-family: -apple-system, 'Helvetica Neue', sans-serif; max-width: 820px; margin: 40px auto; padding: 0 20px; background: #0d1117; color: #c9d1d9; line-height: 1.7; }}
+  h1,h2,h3 {{ color: #e6edf3; border-bottom: 1px solid #21262d; padding-bottom: 8px; margin-top: 32px; }}
+  h1 {{ font-size: 28px; }} h2 {{ font-size: 22px; }} h3 {{ font-size: 18px; }}
+  code {{ font-family: 'JetBrains Mono', 'SF Mono', monospace; background: #161b22; padding: 2px 6px; border-radius: 4px; font-size: 13px; }}
+  pre {{ background: #161b22; padding: 16px; border-radius: 8px; overflow-x: auto; border: 1px solid #21262d; }}
+  pre code {{ background: none; padding: 0; }}
+  a {{ color: #58a6ff; text-decoration: none; }} a:hover {{ text-decoration: underline; }}
+  table {{ border-collapse: collapse; width: 100%; margin: 16px 0; }}
+  th, td {{ border: 1px solid #21262d; padding: 8px 12px; text-align: left; }}
+  th {{ background: #161b22; color: #e6edf3; }}
+  blockquote {{ border-left: 3px solid #30363d; padding-left: 16px; color: #8b949e; margin: 16px 0; }}
+  strong {{ color: #e6edf3; }}
+  .breadcrumb {{ font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8b949e; margin-bottom: 24px; }}
+</style>
+</head><body>
+<div class="breadcrumb">{file_path}</div>
+{html_content}
+</body></html>"""
+    return HTMLResponse(page)
 
 
 @app.post("/api/agents/{agent_name}/status")

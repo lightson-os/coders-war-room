@@ -247,3 +247,59 @@ async def test_set_blocked_status():
         })
         assert resp.status_code == 200
         assert agent_manual_status["phase-3"]["blocked_by"] == "phase-1"
+
+
+@pytest.mark.asyncio
+async def test_list_files_root():
+    from server import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/files?path=.")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "current" in data
+        assert "entries" in data
+        assert isinstance(data["entries"], list)
+        for e in data["entries"]:
+            assert "name" in e
+            assert "type" in e
+            assert "path" in e
+
+
+@pytest.mark.asyncio
+async def test_list_files_with_ownership():
+    from server import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/files?path=northstar")
+        assert resp.status_code == 200
+        data = resp.json()
+        owned = [e for e in data["entries"] if e.get("owner")]
+        assert len(owned) > 0
+        for e in owned:
+            assert e["color"] is not None
+
+
+@pytest.mark.asyncio
+async def test_list_files_security():
+    from server import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/files?path=../../etc")
+        assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_list_files_dirs_have_owned():
+    import server as srv
+    srv.precompute_dir_ownership()
+    from server import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/files?path=.")
+        assert resp.status_code == 200
+        data = resp.json()
+        dirs = [e for e in data["entries"] if e["type"] == "dir"]
+        northstar = [d for d in dirs if d["name"] == "northstar"]
+        if northstar:
+            assert northstar[0]["has_owned"] is True

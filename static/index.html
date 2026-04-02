@@ -1800,7 +1800,11 @@ async function loadDir(path, depth, parentEl, autoExpand) {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({path: entry.path}),
-          });
+          }).then(r => r.json()).then(d => {
+            if (d.status === 'preview' && d.url) {
+              window.open(d.url, '_blank');
+            }
+          }).catch(() => {});
         };
 
         item.ondragstart = (e) => {

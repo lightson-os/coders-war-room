@@ -166,31 +166,13 @@ onboard_agent() {
     # Wait for Claude Code to become ready
     wait_for_prompt "$session"
 
-    # Write onboarding to a temp file (avoids paste-buffer race conditions)
+    # Generate onboarding prompt from template
+    local template_file="$SCRIPT_DIR/onboarding-prompt.md"
     local onboard_file="/tmp/warroom-onboard-${name}.md"
-    cat > "$onboard_file" << ONBOARD_EOF
-You are $name in the Coder's War Room — a real-time communication system for parallel Claude Code agents working on the same project.
-
-YOUR IDENTITY: $name
-YOUR ROLE: $role
-PROJECT: $PROJECT_PATH
-
-WAR ROOM PROTOCOL:
-- Messages prefixed with [WARROOM @$name] are directed at you. You MUST respond and act on them.
-- Messages prefixed with [WARROOM] (no specific tag) are broadcasts. Read them for context. Only respond if it directly impacts your current work. If not relevant, just say "Noted" and continue your work. Do NOT post acknowledgements to the war room.
-- Messages prefixed with [WARROOM SYSTEM] are informational. Do not respond.
-- To send a message to the war room, run: $WARROOM_SH post "your message"
-- To send a direct message: $WARROOM_SH post --to <agent-name> "your message"
-- To check recent messages: $WARROOM_SH history
-- To see messages for you: $WARROOM_SH mentions
-- Keep war room messages concise. This is a chat, not a document.
-- When you complete a task or hit a blocker, post it to the war room immediately.
-
-Acknowledge with your name and role, then wait for instructions.
-ONBOARD_EOF
+    sed "s/{{AGENT_NAME}}/$name/g; s|{{AGENT_ROLE}}|$role|g" "$template_file" > "$onboard_file"
 
     # Inject onboarding via file read command (safer than paste-buffer)
-    tmux set-buffer -b warroom-onboard "Read the onboarding instructions at $onboard_file and follow them. After reading, acknowledge with your name and role."
+    tmux set-buffer -b warroom-onboard "Read the onboarding instructions at $onboard_file and follow them exactly — all 4 steps. Start with Step 1: confirm you have read the 4 core files."
     tmux paste-buffer -b warroom-onboard -t "$session"
     sleep 0.5
     tmux send-keys -t "$session" Enter
