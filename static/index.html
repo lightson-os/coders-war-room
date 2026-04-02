@@ -1057,6 +1057,30 @@
   .fp-item[data-depth="4"] { padding-left: 74px; }
 
   .fp-item.dragging { opacity: 0.5; }
+
+  /* ─── Agent card drag reorder ─── */
+  .ac.reorder-dragging {
+    opacity: 0.4;
+    border: 1px dashed var(--border-bright);
+  }
+
+  .ac.reorder-over {
+    border-top: 2px solid var(--green);
+  }
+
+  .ac-drag-handle {
+    cursor: grab;
+    color: var(--text-dim);
+    font-size: 10px;
+    padding: 0 2px;
+    flex-shrink: 0;
+    user-select: none;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+  }
+
+  .ac:hover .ac-drag-handle { opacity: 1; }
+  .ac-drag-handle:active { cursor: grabbing; }
 </style>
 </head>
 <body>
@@ -1405,6 +1429,7 @@ function renderAgents() {
 
     card.innerHTML = `
       <div class="ac-row1">
+        <span class="ac-drag-handle" title="Drag to reorder">⠿</span>
         <span class="dot ${dotClass}"></span>
         <span class="ac-name" style="color:${color(a.name)}">${a.name}${dynBadge}</span>
         <div class="ac-actions">${btns}</div>
@@ -1415,6 +1440,67 @@ function renderAgents() {
       </div>
       ${actLine}${progressHtml}${blockerHtml}${stalledHtml}${ownsHtml}${commitHtml}
     `;
+
+    // Drag handle for reordering
+    card.draggable = true;
+    card.dataset.agentName = a.name;
+
+    card.addEventListener('dragstart', (e) => {
+      // Only allow drag from the handle
+      if (!e.target.closest('.ac-drag-handle') && e.target.closest('.ac')) {
+        // Check if the drag started on the handle
+        const handle = card.querySelector('.ac-drag-handle');
+        const rect = handle.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+          // Not from handle — check if it's a file drop (allow that)
+          if (!e.dataTransfer.types.includes('application/x-warroom-file')) {
+            e.dataTransfer.setData('application/x-warroom-reorder', a.name);
+            card.classList.add('reorder-dragging');
+          }
+          return;
+        }
+      }
+      e.dataTransfer.setData('application/x-warroom-reorder', a.name);
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('reorder-dragging');
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('reorder-dragging');
+      // Clean up all reorder-over indicators
+      document.querySelectorAll('.reorder-over').forEach(el => el.classList.remove('reorder-over'));
+    });
+
+    card.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types.includes('application/x-warroom-reorder')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        card.classList.add('reorder-over');
+      }
+    });
+
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('reorder-over');
+    });
+
+    card.addEventListener('drop', (e) => {
+      card.classList.remove('reorder-over');
+      const draggedName = e.dataTransfer.getData('application/x-warroom-reorder');
+      if (draggedName && draggedName !== a.name) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Reorder agentRoster
+        const fromIdx = agentRoster.findIndex(r => r.name === draggedName);
+        const toIdx = agentRoster.findIndex(r => r.name === a.name);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const [moved] = agentRoster.splice(fromIdx, 1);
+          agentRoster.splice(toIdx, 0, moved);
+          // Save order to localStorage
+          localStorage.setItem('warroom-agent-order', JSON.stringify(agentRoster.map(r => r.name)));
+          renderAgents();
+        }
+      }
+    });
 
     card.querySelector('.ac-name').onclick = (e) => { e.stopPropagation(); $target.value = a.name; $input.focus(); };
     card.querySelectorAll('.abtn[data-action]').forEach(btn => {
@@ -1857,6 +1943,21 @@ $input.addEventListener('drop', (e) => {
 fetch('/api/agents').then(r => r.json()).then(agents => {
   agentRoster = agents;
   agents.forEach(a => { agentData[a.name] = { presence: a.presence || 'offline', activity: a.activity || null, in_room: a.in_room !== false, dynamic: a.dynamic || false }; });
+  // Restore saved order from localStorage
+  const savedOrder = localStorage.getItem('warroom-agent-order');
+  if (savedOrder) {
+    try {
+      const order = JSON.parse(savedOrder);
+      agentRoster.sort((a, b) => {
+        const ai = order.indexOf(a.name);
+        const bi = order.indexOf(b.name);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
+    } catch(e) {}
+  }
   renderAgents();
 }).catch(() => {});
 connect();
