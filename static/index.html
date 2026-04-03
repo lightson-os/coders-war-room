@@ -2677,7 +2677,13 @@ function renderAgents() {
 }
 
 // ═══════════ Send ═══════════
+let _lastSendTime = 0;
 function send() {
+  // Debounce: prevent double-tap / double-fire within 500ms
+  const now = Date.now();
+  if (now - _lastSendTime < 500) return;
+  _lastSendTime = now;
+
   let text = $input.value.trim();
   const chipEl = $('attachChip');
   const attachPath = chipEl ? chipEl.dataset.path : '';
