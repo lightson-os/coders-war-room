@@ -203,6 +203,9 @@
     fill: white;
   }
 
+  /* Desktop: hide card-level avatar (mobile will show it) */
+  .ac > .agent-avatar { display: none; }
+
   .ac-name {
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px;
@@ -622,6 +625,50 @@
   }
   .drawer-textarea:focus { border-color: var(--blue); }
   .drawer-textarea::placeholder { color: var(--text-dim); }
+
+  .color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+  }
+
+  .color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.selected { border-color: white; }
+
+  .icon-picker {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    padding: 4px 0;
+  }
+
+  .icon-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    background: var(--bg-deep);
+    transition: border-color 0.15s;
+  }
+
+  .icon-cell:hover { background: var(--bg-card-hover); }
+  .icon-cell.selected { border-color: var(--green); }
+
+  .icon-cell svg { width: 22px; height: 22px; fill: var(--text-secondary); }
 
   .drawer-select {
     width: 100%;
@@ -1743,6 +1790,35 @@
       <textarea id="dPrompt" class="drawer-textarea" placeholder="Instructions to send after startup..."></textarea>
     </div>
 
+    <!-- Color -->
+    <div class="drawer-field">
+      <label class="drawer-label">Color</label>
+      <div id="dColorPicker" class="color-picker">
+        <div class="color-swatch selected" data-color="#b388ff" style="background:#b388ff" title="Purple"></div>
+        <div class="color-swatch" data-color="#448aff" style="background:#448aff" title="Blue"></div>
+        <div class="color-swatch" data-color="#18ffff" style="background:#18ffff" title="Cyan"></div>
+        <div class="color-swatch" data-color="#ff5252" style="background:#ff5252" title="Red"></div>
+        <div class="color-swatch" data-color="#ffd740" style="background:#ffd740" title="Gold"></div>
+        <div class="color-swatch" data-color="#ff80ab" style="background:#ff80ab" title="Pink"></div>
+        <div class="color-swatch" data-color="#ff9100" style="background:#ff9100" title="Orange"></div>
+        <div class="color-swatch" data-color="#7a8a9e" style="background:#7a8a9e" title="Grey"></div>
+        <div class="color-swatch" data-color="#64ffda" style="background:#64ffda" title="Teal"></div>
+        <div class="color-swatch" data-color="#b9f6ca" style="background:#b9f6ca" title="Lime"></div>
+        <div class="color-swatch" data-color="#ff6e40" style="background:#ff6e40" title="Coral"></div>
+        <div class="color-swatch" data-color="#8c9eff" style="background:#8c9eff" title="Indigo"></div>
+        <div class="color-swatch" data-color="#ffcc80" style="background:#ffcc80" title="Amber"></div>
+        <div class="color-swatch" data-color="#84ffff" style="background:#84ffff" title="Mint"></div>
+        <div class="color-swatch" data-color="#f48fb1" style="background:#f48fb1" title="Salmon"></div>
+        <div class="color-swatch" data-color="#ce93d8" style="background:#ce93d8" title="Lavender"></div>
+      </div>
+    </div>
+
+    <!-- Icon -->
+    <div class="drawer-field">
+      <label class="drawer-label">Icon</label>
+      <div id="dIconPicker" class="icon-picker"></div>
+    </div>
+
     <!-- Model -->
     <div class="drawer-field">
       <label class="drawer-label">Model</label>
@@ -2019,8 +2095,9 @@ function renderAgents() {
   gCard.className = 'ac ac-operator';
   gCard.innerHTML = `
     <div class="ac-row1">
+      ${renderAvatarCircle({name: 'gurvinder'}, 28)}
       <span class="dot active"></span>
-      <span class="ac-name" style="color:${color('gurvinder')}">gurvinder</span>
+      <span class="ac-name" style="color:${resolveAgentColor({name: 'gurvinder'})}">gurvinder</span>
     </div>
     <div class="ac-row2">
       <span class="ac-role">Operator</span>
@@ -2118,11 +2195,13 @@ function renderAgents() {
 
     const dynBadge = isDynamic ? '<span class="ac-dynamic" title="Dynamic agent">~</span>' : '';
 
+    const agentColor = resolveAgentColor(a);
     card.innerHTML = `
       <div class="ac-row1">
         <span class="ac-drag-handle" title="Drag to reorder">⠿</span>
+        ${renderAvatarCircle(a, 28)}
         <span class="dot ${dotClass}"></span>
-        <span class="ac-name" style="color:${color(a.name)}">${a.name}${dynBadge}</span>
+        <span class="ac-name" style="color:${agentColor}">${a.name}${dynBadge}</span>
         <div class="ac-actions">${btns}</div>
       </div>
       <div class="ac-row2">
@@ -2473,6 +2552,63 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && $drawer.classList.contains('open')) closeDrawer();
 });
 
+// ═══════════ Color + Icon Pickers ═══════════
+const $colorPicker = $('dColorPicker');
+const $iconPicker = $('dIconPicker');
+let selectedColor = '#b388ff';
+let selectedIcon = 'crown';
+
+// Populate icon picker grid
+if ($iconPicker) {
+  Object.entries(AVATAR_ICONS).forEach(([key, svg]) => {
+    const cell = document.createElement('div');
+    cell.className = 'icon-cell' + (key === selectedIcon ? ' selected' : '');
+    cell.dataset.icon = key;
+    cell.innerHTML = svg;
+    cell.onclick = () => {
+      $iconPicker.querySelectorAll('.icon-cell').forEach(c => c.classList.remove('selected'));
+      cell.classList.add('selected');
+      selectedIcon = key;
+    };
+    $iconPicker.appendChild(cell);
+  });
+}
+
+// Color picker click handler
+if ($colorPicker) {
+  $colorPicker.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.onclick = () => {
+      $colorPicker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+      selectedColor = swatch.dataset.color;
+    };
+  });
+}
+
+// Auto-select color and icon when role type changes
+const $dRoleTypeForPicker = $('dRoleType');
+if ($dRoleTypeForPicker) {
+  $dRoleTypeForPicker.addEventListener('change', () => {
+    const rt = $dRoleTypeForPicker.value;
+    if (rt && ROLE_COLOR_MAP[rt]) {
+      selectedColor = ROLE_COLOR_MAP[rt];
+      if ($colorPicker) {
+        $colorPicker.querySelectorAll('.color-swatch').forEach(s => {
+          s.classList.toggle('selected', s.dataset.color === selectedColor);
+        });
+      }
+    }
+    if (rt && ROLE_ICON_MAP[rt]) {
+      selectedIcon = ROLE_ICON_MAP[rt];
+      if ($iconPicker) {
+        $iconPicker.querySelectorAll('.icon-cell').forEach(c => {
+          c.classList.toggle('selected', c.dataset.icon === selectedIcon);
+        });
+      }
+    }
+  });
+}
+
 // ─── Role type preset handler ───
 $dRoleType.onchange = () => {
   const rt = $dRoleType.value;
@@ -2590,6 +2726,8 @@ $btnLaunch.addEventListener('click', async () => {
         initial_prompt: $dPrompt.value.trim(),
         model: $dModel.value,
         skip_permissions: $dSkipPerms.checked,
+        color: selectedColor,
+        icon: selectedIcon,
       }),
     });
 
