@@ -1805,8 +1805,32 @@
       margin: 10px;
     }
 
-    /* ═══ File browser: larger touch targets ═══ */
-    .fp-item { padding: 10px 12px; font-size: 13px; min-height: 44px; }
+    /* ═══ File tree — mobile ═══ */
+    .fp-item {
+      padding: 12px 14px;
+      font-size: 15px;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .fp-head {
+      padding: 10px 14px;
+    }
+
+    .fp-title {
+      font-size: 12px;
+    }
+
+    .fp-path {
+      font-size: 12px;
+    }
+
+    .fp-tree {
+      padding: 0 4px;
+    }
 
     /* ═══ Bottom Sheets ═══ */
     .bottom-sheet {
