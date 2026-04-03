@@ -2269,7 +2269,12 @@ function renderAgents() {
 
 // ═══════════ Send ═══════════
 function send() {
-  const text = $input.value.trim();
+  let text = $input.value.trim();
+  const chipEl = $('attachChip');
+  const attachPath = chipEl ? chipEl.dataset.path : '';
+  if (attachPath) {
+    text = (text ? text + ' ' : '') + `[uploaded: ${attachPath}]`;
+  }
   if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify({ sender: 'gurvinder', target: $target.value, content: text, type: 'message' }));
   renderMsg({ sender: 'gurvinder', target: $target.value, content: text, type: 'message', timestamp: new Date().toISOString() });
@@ -2277,12 +2282,31 @@ function send() {
   $input.value = '';
   $input.style.height = 'auto';
   $target.value = 'all';
+  // Clear attachment chip
+  if (chipEl) { chipEl.style.display = 'none'; chipEl.dataset.path = ''; }
+  updateSendVisibility();
 }
 
 function scrollEnd() { $msgs.scrollTop = $msgs.scrollHeight; }
 
 // ═══════════ Events ═══════════
-$input.addEventListener('input', () => { $input.style.height = 'auto'; $input.style.height = Math.min($input.scrollHeight, 120) + 'px'; });
+function updateSendVisibility() {
+  const hasText = $input.value.trim().length > 0;
+  const hasAttachment = $('attachChip') && $('attachChip').style.display !== 'none';
+  if (hasText || hasAttachment) {
+    $send.classList.add('visible');
+    $send.disabled = false;
+  } else {
+    $send.classList.remove('visible');
+    $send.disabled = true;
+  }
+}
+
+$input.addEventListener('input', () => {
+  $input.style.height = 'auto';
+  $input.style.height = Math.min($input.scrollHeight, 88) + 'px';
+  updateSendVisibility();
+});
 $input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 $send.addEventListener('click', send);
 
@@ -2853,7 +2877,16 @@ if ($attachBtn) {
             const resp = await fetch('/api/upload', { method: 'POST', body: fd });
             const data = await resp.json();
             if (data.path) {
-              $input.value += `[uploaded: ${data.path}] `;
+              // Show attachment chip instead of inline text
+              const chipEl = $('attachChip');
+              const nameEl = $('attachName');
+              if (chipEl && nameEl) {
+                const fname = data.filename || data.path.split('/').pop();
+                nameEl.textContent = '📄 ' + (fname.length > 25 ? fname.slice(0, 22) + '...' : fname);
+                chipEl.style.display = 'flex';
+                chipEl.dataset.path = data.path;
+                updateSendVisibility();
+              }
               $input.focus();
             }
           } catch (e) { alert('Upload failed'); }
@@ -2863,6 +2896,20 @@ if ($attachBtn) {
         showProjectFilePicker();
       }
     });
+  };
+}
+
+// Attachment chip remove
+const $attachRemove = $('attachRemove');
+if ($attachRemove) {
+  $attachRemove.onclick = () => {
+    const chipEl = $('attachChip');
+    if (chipEl) {
+      chipEl.style.display = 'none';
+      chipEl.dataset.path = '';
+    }
+    updateSendVisibility();
+    $input.focus();
   };
 }
 
