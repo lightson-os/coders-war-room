@@ -457,6 +457,7 @@
   .pill-attach { display: none; }
   .attach-chip { display: none; }
   .send-arrow { display: none; }
+  .send-text { display: inline; }
 
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -1172,7 +1173,7 @@
     }
 
     .tab.active { color: var(--green); }
-    .tab-icon { font-size: 20px; line-height: 1; }
+    .tab-icon { font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center; }
     .tab-label { letter-spacing: 0.5px; }
 
     /* ═══ Layout: single column ═══ */
@@ -1256,9 +1257,8 @@
 
     .target-sel { display: none; }
 
-    /* Attachment chip */
+    /* Attachment chip — shown via JS, hidden by default */
     .attach-chip {
-      display: flex !important;
       align-items: center;
       gap: 6px;
       background: var(--bg-card);
@@ -1287,8 +1287,8 @@
       gap: 0;
       background: var(--bg-deep);
       border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 4px 4px 4px 8px;
+      border-radius: 24px;
+      padding: 4px 4px 4px 10px;
       width: 100%;
       transition: border-color 0.15s;
     }
@@ -1327,28 +1327,37 @@
 
     .input-pill .msg-input::placeholder { color: var(--text-dim); }
 
-    /* Circular send button */
+    /* Circular send button — iMessage style */
     .send-btn {
-      width: 28px;
-      height: 28px;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
       border-radius: 50%;
-      background: var(--green);
+      background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
       border: none;
       color: var(--bg-void);
-      font-size: 12px;
       display: none;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       flex-shrink: 0;
       padding: 0;
-      transition: opacity 0.15s;
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 8px rgba(0, 230, 118, 0.3);
     }
+
+    .send-btn:active {
+      transform: scale(0.88);
+      box-shadow: 0 1px 4px rgba(0, 230, 118, 0.2);
+    }
+
+    .send-btn .send-text { display: none; }
+    .send-btn .send-arrow { display: flex; align-items: center; justify-content: center; }
 
     .send-btn.visible { display: flex; }
     .send-btn:disabled { display: none; }
-
-    .send-arrow { font-size: 14px; font-weight: 700; line-height: 1; }
 
     .input-row {
       display: flex;
@@ -1519,37 +1528,48 @@
 
     .bs-title {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-dim);
       letter-spacing: 1.5px;
       text-transform: uppercase;
       margin-bottom: 12px;
-      padding-bottom: 8px;
+      padding-bottom: 10px;
       border-bottom: 1px solid var(--border);
     }
 
     .bs-item {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 14px 8px;
+      gap: 14px;
+      padding: 16px 10px;
       font-family: 'Source Sans 3', sans-serif;
-      font-size: 16px;
+      font-size: 17px;
       color: var(--text-primary);
       border-bottom: 1px solid var(--border);
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
+      min-height: 52px;
     }
 
     .bs-item:last-child { border-bottom: none; }
     .bs-item:active { background: var(--bg-card-hover); }
 
+    .bs-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
     .bs-cancel {
       text-align: center;
-      padding: 14px;
+      padding: 16px;
       color: var(--red);
       font-family: 'Source Sans 3', sans-serif;
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 500;
       cursor: pointer;
       margin-top: 8px;
@@ -1608,7 +1628,8 @@
           <button class="pill-attach" id="attachBtn" title="Attach">📎</button>
           <textarea id="msgInput" class="msg-input" placeholder="Message the war room..." rows="1"></textarea>
           <button id="sendBtn" class="send-btn" disabled>
-            <span class="send-arrow">▲</span>
+            <span class="send-text">Send</span>
+            <svg class="send-arrow" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
       </div>
@@ -1627,15 +1648,15 @@
 <!-- Mobile Tab Bar -->
 <nav class="tab-bar" id="tabBar">
   <button class="tab active" data-tab="chat">
-    <span class="tab-icon">💬</span>
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
     <span class="tab-label">Chat</span>
   </button>
   <button class="tab" data-tab="agents">
-    <span class="tab-icon">👥</span>
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
     <span class="tab-label">Agents</span>
   </button>
   <button class="tab" data-tab="files">
-    <span class="tab-icon">📁</span>
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
     <span class="tab-label">Files</span>
   </button>
 </nav>
@@ -2652,12 +2673,12 @@ async function loadDir(path, depth, parentEl, autoExpand) {
           e.stopPropagation();
           if (window.innerWidth < 768) {
             const actions = [
-              { icon: '📋', label: 'Copy path', action: 'copy' },
-              { icon: '💬', label: 'Send to chat', action: 'chat' },
-              { icon: '👤', label: 'Assign to agent...', action: 'assign' },
+              { icon: SVG_ICONS.copy, label: 'Copy path', action: 'copy' },
+              { icon: SVG_ICONS.chat, label: 'Send to chat', action: 'chat' },
+              { icon: SVG_ICONS.user, label: 'Assign to agent...', action: 'assign' },
             ];
             if (entry.name.match(/\.(md|markdown)$/i)) {
-              actions.push({ icon: '👁', label: 'Preview', action: 'preview' });
+              actions.push({ icon: SVG_ICONS.eye, label: 'Preview', action: 'preview' });
             }
             showBottomSheet(entry.name, actions, (act) => {
               if (act.action === 'copy') {
@@ -2669,7 +2690,7 @@ async function loadDir(path, depth, parentEl, autoExpand) {
                 switchTab('chat');
                 $input.focus();
               } else if (act.action === 'assign') {
-                const agents = agentRoster.map(a => ({ label: `@${a.name}`, value: a.name, icon: '👤' }));
+                const agents = agentRoster.map(a => ({ label: `@${a.name}`, value: a.name, icon: SVG_ICONS.user }));
                 showBottomSheet('Assign to...', agents, (agent) => {
                   $target.value = agent.value;
                   if ($inputTarget) $inputTarget.textContent = `@${agent.value} ▼`;
@@ -2782,11 +2803,11 @@ $('rollCallBtn').onclick = async () => {
   gear.onclick = () => {
     fetch('/api/server/health').then(r => r.json()).then(d => {
       showBottomSheet('Server', [
-        { icon: '⏱', label: `Uptime: ${d.uptime_human}` },
-        { icon: d.launchagent_active ? '🟢' : '⚪', label: `LaunchAgent: ${d.launchagent_active ? 'active' : 'not installed'}` },
-        { icon: '📊', label: `Agents: ${d.agents_alive} alive / ${d.agent_count} total` },
-        { icon: '🔄', label: 'Restart Server', action: 'restart' },
-        { icon: '📋', label: 'View Logs', action: 'logs' },
+        { icon: SVG_ICONS.clock, label: `Uptime: ${d.uptime_human}` },
+        { icon: d.launchagent_active ? SVG_ICONS.dot_green : SVG_ICONS.dot_grey, label: `LaunchAgent: ${d.launchagent_active ? 'active' : 'not installed'}` },
+        { icon: SVG_ICONS.chart, label: `Agents: ${d.agents_alive} alive / ${d.agent_count} total` },
+        { icon: SVG_ICONS.refresh, label: 'Restart Server', action: 'restart' },
+        { icon: SVG_ICONS.logs, label: 'View Logs', action: 'logs' },
       ], (item) => {
         if (item.action === 'restart') {
           if (confirm('Restart server?')) fetch('/api/server/restart', { method: 'POST' }).catch(() => {});
@@ -2799,6 +2820,25 @@ $('rollCallBtn').onclick = async () => {
   const serverBar = document.querySelector('.server-bar');
   if (serverBar) serverBar.appendChild(gear);
 })();
+
+// ═══════════ SVG Icon Map ═══════════
+const SVG_ICONS = {
+  copy: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  user: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  eye: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  broadcast: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  clock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  chart: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+  refresh: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+  logs: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  folder: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  file: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+  dot_green: '<svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00e676"/></svg>',
+  dot_yellow: '<svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#ffd740"/></svg>',
+  dot_grey: '<svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#3e4e64"/></svg>',
+};
 
 // ═══════════ Mobile Tab Navigation ═══════════
 let activeTab = 'chat';
@@ -2844,7 +2884,8 @@ function showBottomSheet(title, items, onSelect) {
 
   let html = `<div class="bs-title">${title}</div>`;
   items.forEach((item, i) => {
-    html += `<div class="bs-item" data-index="${i}">${item.icon ? item.icon + ' ' : ''}${item.label}</div>`;
+    const iconHtml = item.icon ? `<span class="bs-icon">${item.icon}</span>` : '';
+    html += `<div class="bs-item" data-index="${i}">${iconHtml}<span>${item.label}</span></div>`;
   });
   html += `<div class="bs-cancel">Cancel</div>`;
   sheet.innerHTML = html;
@@ -2876,10 +2917,10 @@ const $inputTarget = $('inputTarget');
 if ($inputTarget) {
   $inputTarget.onclick = () => {
     if (window.innerWidth >= 768) return;
-    const items = [{ label: '@all', value: 'all', icon: '📢' }];
+    const items = [{ label: '@all', value: 'all', icon: SVG_ICONS.broadcast }];
     agentRoster.forEach(a => {
       const d = agentData[a.name] || {};
-      const dot = d.presence === 'active' ? '🟢' : d.presence === 'busy' ? '🟡' : '⚪';
+      const dot = d.presence === 'active' ? SVG_ICONS.dot_green : d.presence === 'busy' ? SVG_ICONS.dot_yellow : SVG_ICONS.dot_grey;
       items.push({ label: `@${a.name}`, value: a.name, icon: dot });
     });
     showBottomSheet('Send to...', items, (item) => {
@@ -2895,9 +2936,9 @@ const $attachBtn = $('attachBtn');
 if ($attachBtn) {
   $attachBtn.onclick = () => {
     showBottomSheet('Attach', [
-      { icon: '📷', label: 'Photo', action: 'photo' },
-      { icon: '📄', label: 'Upload File', action: 'file' },
-      { icon: '📂', label: 'Project File', action: 'project' },
+      { icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>', label: 'Photo', action: 'photo' },
+      { icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>', label: 'Upload File', action: 'file' },
+      { icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>', label: 'Project File', action: 'project' },
     ], (item) => {
       if (item.action === 'photo' || item.action === 'file') {
         const inp = document.createElement('input');
@@ -2955,13 +2996,13 @@ async function showProjectFilePicker(path) {
     const data = await resp.json();
     const items = [];
     if (data.parent != null) {
-      items.push({ icon: '⬆️', label: '.. (back)', action: 'navigate', path: data.parent });
+      items.push({ icon: SVG_ICONS.back, label: '.. (back)', action: 'navigate', path: data.parent });
     }
     data.entries.forEach(e => {
       if (e.type === 'dir') {
-        items.push({ icon: '📁', label: e.name, action: 'navigate', path: e.path });
+        items.push({ icon: SVG_ICONS.folder, label: e.name, action: 'navigate', path: e.path });
       } else {
-        items.push({ icon: '📄', label: e.name, action: 'select', path: e.path });
+        items.push({ icon: SVG_ICONS.file, label: e.name, action: 'select', path: e.path });
       }
     });
     showBottomSheet(`📂 ${data.current === '.' ? 'project root' : data.current}`, items, (item) => {
