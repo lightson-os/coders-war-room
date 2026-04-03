@@ -1979,11 +1979,7 @@ const PRESENCE_LABELS = {
   offline: 'offline',
 };
 
-const color = n => {
-  const agent = agentRoster.find(a => a.name === n);
-  if (agent) return resolveAgentColor(agent);
-  return COLORS[n] || '#7a8a9e';
-};
+const color = n => COLORS[n] || '#7a8a9e';
 const esc = t => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
 
 let ws = null;
@@ -2021,6 +2017,11 @@ function connect() {
         if (agentData[name] && agentData[name].dynamic) incoming[name].dynamic = true;
       }
       agentData = incoming;
+      // Update COLORS map from agent identity system
+      agentRoster.forEach(a => {
+        const c = (typeof resolveAgentColor === 'function') ? resolveAgentColor(a) : null;
+        if (c) COLORS[a.name] = c;
+      });
       renderAgents();
     }
     else if (d.type === 'membership') { if (agentData[d.agent]) agentData[d.agent].in_room = d.in_room; renderAgents(); }
