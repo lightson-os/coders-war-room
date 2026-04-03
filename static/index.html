@@ -1123,6 +1123,18 @@
 
   /* ═══════════ MOBILE RESPONSIVE ═══════════ */
   @media (max-width: 767px) {
+    /* ═══ Mobile CSS Variables ═══ */
+    :root {
+      --bubble-radius-sent: 16px 16px 4px 16px;
+      --bubble-radius-received: 4px 12px 12px 12px;
+      --bubble-max-sent: 80%;
+      --bubble-max-received: 85%;
+      --green-bubble-bg: rgba(0, 230, 118, 0.12);
+      --input-pill-radius: 20px;
+      --input-pill-height: 40px;
+      --send-btn-size: 28px;
+    }
+
     /* ═══ Tab Bar ═══ */
     .tab-bar {
       display: flex;
@@ -1266,11 +1278,120 @@
 
     .msg-input { font-size: 16px; } /* Prevents iOS zoom on focus */
 
-    /* ═══ Messages ═══ */
-    .messages { padding: 12px 12px; }
-    .msg { padding: 8px 10px; }
-    .msg-body { font-size: 15px; }
-    .msg-sender { font-size: 12px; }
+    /* ═══ Messages — iMessage Hybrid ═══ */
+    .messages {
+      padding: 12px 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Base message — agent card (left-aligned) */
+    .msg {
+      padding: 10px 12px;
+      border-radius: 4px 12px 12px 12px;
+      background: var(--bg-card);
+      border-left: 4px solid var(--border);
+      max-width: 85%;
+      align-self: flex-start;
+      margin-bottom: 2px;
+    }
+
+    .msg-body {
+      font-family: 'Source Sans 3', -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .msg-sender { font-size: 12px; font-weight: 700; }
+    .msg-time { font-size: 11px; }
+
+    /* User message — right-aligned green bubble */
+    .msg.msg-user {
+      align-self: flex-end;
+      background: var(--green-bubble-bg);
+      border-left: none;
+      border-radius: 16px 16px 4px 16px;
+      max-width: 80%;
+      text-align: left;
+    }
+
+    .msg.msg-user .msg-head { display: none; }
+
+    .msg.msg-user .msg-time-below {
+      display: block;
+      text-align: right;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Direct messages — orange tint on border */
+    .msg.direct {
+      border-left-color: var(--orange);
+      background: var(--bg-card);
+    }
+
+    .msg.msg-user.direct {
+      border-left: none;
+      background: rgba(255, 145, 0, 0.10);
+    }
+
+    /* System messages — centered, no bubble */
+    .msg.system {
+      align-self: center;
+      max-width: 90%;
+      background: transparent;
+      border-left: none;
+      text-align: center;
+      font-size: 12px;
+      font-style: italic;
+      color: var(--text-dim);
+      padding: 4px 12px;
+      margin: 4px 0;
+    }
+
+    /* Grouping: same sender within 20s */
+    .msg.grouped {
+      margin-top: 4px;
+      border-radius: 4px 12px 12px 12px;
+    }
+
+    .msg.msg-user.grouped {
+      border-radius: 16px 16px 4px 16px;
+    }
+
+    .msg.grouped .msg-head { display: none; }
+    .msg.msg-user.grouped .msg-time-below { display: none; }
+
+    .msg.group-start {
+      margin-top: 12px;
+    }
+
+    .msg.standalone {
+      margin-top: 12px;
+      margin-bottom: 2px;
+    }
+
+    /* Time divider */
+    .time-divider {
+      align-self: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      padding: 4px 12px;
+      margin: 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .time-divider::before, .time-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
 
     /* ═══ Agent cards ═══ */
     .ac { padding: 12px 14px; }
