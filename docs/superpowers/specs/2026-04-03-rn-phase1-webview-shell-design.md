@@ -60,6 +60,18 @@ Phase 1 wraps this web UI in a React Native WebView. The result is a real iOS ap
 | `backgroundColor` | `#060810` | Match War Room theme during load |
 | `contentMode` | `mobile` | Force mobile viewport |
 | `allowsInlineMediaPlayback` | `true` | Standard iOS behavior |
+| `userAgent` | Append `WarRoomMobile/1.0` | Server can identify app vs browser requests |
+| `keyboardDisplayRequiresUserAction` | `false` | Allow programmatic keyboard focus |
+| `hideKeyboardAccessoryView` | `true` | Remove iOS "Done" bar above keyboard — cleaner chat input |
+| `cacheEnabled` | `true` | Keep cache for Phase 1; clear via URL version param if needed |
+
+### External Link Handling
+
+Links to external sites (GitHub, docs) must NOT open inside the WebView — there's no back button to return. Use `onShouldStartLoadWithRequest` to intercept any URL that doesn't match the Tailscale IP (`100.119.47.67:5680`) and open it in the system browser via Expo's `Linking.openURL()`.
+
+### White Flash Prevention
+
+The WebView defaults to white background during initialization even with dark app.json settings. Explicitly set `style={{ backgroundColor: '#060810' }}` on BOTH the WebView component AND its parent View container.
 
 ### Connectivity Detection
 
