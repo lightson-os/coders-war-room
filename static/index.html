@@ -445,6 +445,13 @@
   .send-btn:hover { box-shadow: 0 0 16px rgba(0,230,118,0.25); }
   .send-btn:disabled { background: var(--border); color: var(--text-dim); box-shadow: none; cursor: default; }
 
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex: 1;
+  }
+
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
@@ -1199,8 +1206,48 @@
 
     /* ═══ Input area ═══ */
     .input-bar {
+      flex-direction: column;
+      gap: 4px;
       padding: 8px 12px;
       padding-bottom: calc(56px + env(safe-area-inset-bottom, 8px));
+    }
+
+    .input-target {
+      display: block !important;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--green);
+      padding: 4px 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .input-attach {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      min-width: 40px;
+      min-height: 40px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .input-attach:active { background: var(--bg-card-hover); }
+
+    .target-sel { display: none; } /* Hide desktop dropdown on mobile */
+
+    .send-btn { padding: 9px 14px; font-size: 14px; }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      width: 100%;
     }
 
     .msg-input { font-size: 16px; } /* Prevents iOS zoom on focus */
@@ -1327,9 +1374,13 @@
   <div class="chat">
     <div id="messages" class="messages"></div>
     <div class="input-bar">
+      <div class="input-target" id="inputTarget" style="display:none">@all ▼</div>
       <select id="targetSel" class="target-sel"><option value="all">@all</option></select>
-      <textarea id="msgInput" class="msg-input" placeholder="Message the war room..." rows="1"></textarea>
-      <button id="sendBtn" class="send-btn" disabled>Send</button>
+      <div class="input-row">
+        <button class="input-attach" id="attachBtn" style="display:none" title="Attach">📎</button>
+        <textarea id="msgInput" class="msg-input" placeholder="Message the war room..." rows="1"></textarea>
+        <button id="sendBtn" class="send-btn" disabled>Send</button>
+      </div>
     </div>
   </div>
 
@@ -1566,6 +1617,23 @@ function renderMsg(m) {
     lastSender = m.sender;
   }
   $msgs.appendChild(el);
+
+  // Image preview for uploaded files
+  if (!isSystem && m.content && m.content.includes('[uploaded:')) {
+    const match = m.content.match(/\[uploaded:\s*([^\]]+)\]/);
+    if (match) {
+      const filePath = match[1].trim();
+      const ext = filePath.split('.').pop().toLowerCase();
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+        const img = document.createElement('img');
+        img.src = `/uploads/${filePath.replace('docs/warroom-uploads/', '')}`;
+        img.style.cssText = 'max-width:100%;max-height:300px;border-radius:8px;margin-top:8px;cursor:pointer;display:block';
+        img.onclick = () => window.open(img.src, '_blank');
+        const body = el.querySelector('.msg-body');
+        if (body) body.appendChild(img);
+      }
+    }
+  }
 }
 
 // ═══════════ Agent Sidebar ═══════════
@@ -1776,7 +1844,12 @@ function renderAgents() {
         const agent = btn.dataset.agent;
         if (action === 'attach') fetch(`/api/agents/${agent}/attach`, { method: 'POST' });
         else if (action === 'deboard') fetch(`/api/agents/${agent}/deboard`, { method: 'POST' });
-        else if (action === 'msg') { $target.value = agent; $input.focus(); }
+        else if (action === 'msg') {
+          $target.value = agent;
+          if ($inputTarget) $inputTarget.textContent = `@${agent} ▼`;
+          $input.focus();
+          if (window.innerWidth < 768) switchTab('chat');
+        }
         else if (action === 'recover') {
           btn.textContent = 'Recovering...';
           btn.disabled = true;
@@ -2358,6 +2431,88 @@ function showBottomSheet(title, items, onSelect) {
       if (onSelect) onSelect(items[idx], idx);
     };
   });
+}
+
+// ═══════════ Mobile: Agent Picker ═══════════
+const $inputTarget = $('inputTarget');
+if ($inputTarget) {
+  $inputTarget.onclick = () => {
+    if (window.innerWidth >= 768) return;
+    const items = [{ label: '@all', value: 'all', icon: '📢' }];
+    agentRoster.forEach(a => {
+      const d = agentData[a.name] || {};
+      const dot = d.presence === 'active' ? '🟢' : d.presence === 'busy' ? '🟡' : '⚪';
+      items.push({ label: `@${a.name}`, value: a.name, icon: dot });
+    });
+    showBottomSheet('Send to...', items, (item) => {
+      $target.value = item.value;
+      $inputTarget.textContent = `@${item.value} ▼`;
+      $input.focus();
+    });
+  };
+}
+
+// ═══════════ Mobile: Attachment ═══════════
+const $attachBtn = $('attachBtn');
+if ($attachBtn) {
+  $attachBtn.onclick = () => {
+    showBottomSheet('Attach', [
+      { icon: '📷', label: 'Photo', action: 'photo' },
+      { icon: '📄', label: 'Upload File', action: 'file' },
+      { icon: '📂', label: 'Project File', action: 'project' },
+    ], (item) => {
+      if (item.action === 'photo' || item.action === 'file') {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        if (item.action === 'photo') inp.accept = 'image/*';
+        inp.onchange = async () => {
+          const f = inp.files[0];
+          if (!f) return;
+          const fd = new FormData();
+          fd.append('file', f);
+          try {
+            const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (data.path) {
+              $input.value += `[uploaded: ${data.path}] `;
+              $input.focus();
+            }
+          } catch (e) { alert('Upload failed'); }
+        };
+        inp.click();
+      } else if (item.action === 'project') {
+        showProjectFilePicker();
+      }
+    });
+  };
+}
+
+async function showProjectFilePicker(path) {
+  path = path || '.';
+  try {
+    const resp = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
+    const data = await resp.json();
+    const items = [];
+    if (data.parent != null) {
+      items.push({ icon: '⬆️', label: '.. (back)', action: 'navigate', path: data.parent });
+    }
+    data.entries.forEach(e => {
+      if (e.type === 'dir') {
+        items.push({ icon: '📁', label: e.name, action: 'navigate', path: e.path });
+      } else {
+        items.push({ icon: '📄', label: e.name, action: 'select', path: e.path });
+      }
+    });
+    showBottomSheet(`📂 ${data.current === '.' ? 'project root' : data.current}`, items, (item) => {
+      if (item.action === 'navigate') {
+        showProjectFilePicker(item.path);
+      } else if (item.action === 'select') {
+        $input.value += `[file: ${item.path}] `;
+        $input.focus();
+        if (window.innerWidth < 768) switchTab('chat');
+      }
+    });
+  } catch (e) { alert('Failed to load files'); }
 }
 
 // ═══════════ Init ═══════════
