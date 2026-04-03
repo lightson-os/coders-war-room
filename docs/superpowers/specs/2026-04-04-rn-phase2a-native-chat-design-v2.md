@@ -320,21 +320,71 @@ Note: `@react-navigation/native-stack` added (was not in v1 spec) — needed for
 
 ---
 
-## 13. Success Criteria
+## 13. Implementation Watch Items
+
+From code review — these must be addressed during implementation:
+
+### Keyboard Handling
+Use `Keyboard.addListener('keyboardWillShow'/'keyboardWillHide')` with `Animated.timing` and `useNativeDriver: false` (position animation can't use native driver). Ensure FlashList content inset adjusts correctly when keyboard appears. Test on physical iPhone — simulator keyboard behavior differs.
+
+### Image Previews
+Messages containing `[uploaded: path]` with image extensions need a `MessageMedia` component for inline image previews within the 95% width constraint. Use `Image` from React Native with `resizeMode="contain"`, max-height 300px, borderRadius 8px.
+
+### WebView Synchronization
+Agents/Files WebView tabs maintain their own WebSocket connections. If agent status changes while viewing the native Chat, the WebView tabs won't know until they receive their next `agent_status` broadcast (which happens every few seconds via the server's periodic push). This is acceptable — no extra sync needed since the server broadcasts to all connections.
+
+### Breathing Dot Animation
+Use `useNativeDriver: true` for the opacity animation (shadow pulse is CSS-only on web; on RN use animated opacity on an outer glow View). Keeps animation off the JS thread when WebSocket is busy processing messages.
+
+### Haptic Feedback
+Add `expo-haptics` — use `Haptics.impactAsync(ImpactFeedbackStyle.Light)` on:
+- Tapping the War Room card
+- Sending a message (send button press)
+- Pull-to-refresh completion
+
+### Connectivity State
+When WebSocket is OFFLINE:
+- Home screen card: green dot turns grey, "ONLINE" → "OFFLINE" in red
+- Chat screen: show a thin red bar below header: "Reconnecting..." with activity indicator
+- Input bar: greyed out, send disabled, placeholder changes to "Connecting..."
+
+---
+
+## 14. New Dependencies (updated)
+
+| Package | Purpose |
+|---------|---------|
+| `@react-navigation/native` | Navigation core |
+| `@react-navigation/bottom-tabs` | Tab navigator |
+| `@react-navigation/native-stack` | Stack navigator (Home → Chat) |
+| `react-native-screens` | Required by React Navigation |
+| `@shopify/flash-list` | Fast message list |
+| `expo-font` | Custom fonts |
+| `expo-splash-screen` | Splash until fonts ready |
+| `react-native-svg` | SVG icons |
+| `expo-haptics` | Haptic feedback on tap/send |
+
+---
+
+## 15. Success Criteria
 
 1. Home screen shows War Room card with breathing green dot and agent health
 2. Tapping card pushes to full-screen Chat — tab bar disappears
-3. Chat header has: back, WAR ROOM, LIVE, ROLL CALL, ⚙
-4. Back button returns to Home — tab bar reappears
-5. Messages render natively (not WebView) with correct alignment
-6. Legibility: text on #060810 (17.2:1 contrast), 95% width, 16px, letter-spacing 0.2
-7. FlashList scrolls smoothly through 200+ messages
-8. 20-second grouping + time dividers after 5+ min gaps
-9. Input bar: + circle, pill, green send circle (iMessage-style)
-10. Keyboard animation smooth (custom, not KeyboardAvoidingView)
-11. Target selector (@all / @agent) via ActionSheet
-12. Agents tab works via WebView (web tab bar hidden)
-13. Files tab works via WebView (web tab bar hidden)
-14. Fonts loaded: Source Sans 3 + JetBrains Mono
-15. WebSocket reconnects on foreground return
-16. Home screen updates agent counts in real-time via WebSocket
+3. Haptic feedback on card tap and message send
+4. Chat header has: back, WAR ROOM, LIVE, ROLL CALL, ⚙
+5. Back button returns to Home — tab bar reappears
+6. Messages render natively (not WebView) with correct alignment
+7. Legibility: text on #060810 (17.2:1 contrast), 95% width, 16px, letter-spacing 0.2
+8. FlashList scrolls smoothly through 200+ messages
+9. 20-second grouping + time dividers after 5+ min gaps
+10. Input bar: + circle, pill, green send circle (iMessage-style)
+11. Keyboard animation smooth (custom Animated.timing)
+12. Target selector (@all / @agent) via ActionSheet
+13. Agents tab works via WebView (web tab bar hidden)
+14. Files tab works via WebView (web tab bar hidden)
+15. Fonts loaded: Source Sans 3 + JetBrains Mono
+16. WebSocket reconnects on foreground return
+17. Home screen updates agent counts in real-time via WebSocket
+18. Breathing dot uses native driver (off JS thread)
+19. OFFLINE state: grey dot, red bar in chat, greyed input
+20. Image previews render inline for uploaded images
