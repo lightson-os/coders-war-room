@@ -17,6 +17,17 @@ from pydantic import BaseModel
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
+
+# Resolve tmux binary — nohup/launchd may not have /opt/homebrew/bin in PATH
+import shutil
+TMUX_BIN = shutil.which("tmux") or "/opt/homebrew/bin/tmux"
+if not Path(TMUX_BIN).exists():
+    # Last resort: search common locations
+    for candidate in ["/opt/homebrew/bin/tmux", "/usr/local/bin/tmux", "/usr/bin/tmux"]:
+        if Path(candidate).exists():
+            TMUX_BIN = candidate
+            break
+
 CONFIG_PATH = Path(__file__).parent / "config.yaml"
 with open(CONFIG_PATH) as f:
     CONFIG = yaml.safe_load(f)
@@ -293,7 +304,7 @@ async def get_message_by_id(msg_id: int) -> Optional[dict]:
 def tmux_session_exists(session_name: str) -> bool:
     try:
         result = subprocess.run(
-            ["tmux", "has-session", "-t", session_name],
+            [TMUX_BIN, "has-session", "-t", session_name],
             capture_output=True,
             timeout=2,
         )
@@ -306,7 +317,7 @@ def capture_tmux_lines(session_name: str, n: int = 10) -> Optional[str]:
     """Capture the last n lines from a tmux pane. Returns None if session doesn't exist."""
     try:
         result = subprocess.run(
-            ["tmux", "capture-pane", "-t", session_name, "-p", "-S", f"-{n}"],
+            [TMUX_BIN, "capture-pane", "-t", session_name, "-p", "-S", f"-{n}"],
             capture_output=True,
             text=True,
             timeout=2,
@@ -430,12 +441,12 @@ def send_to_tmux(session_name: str, text: str):
     """Inject text into a tmux session. Uses set-buffer + paste-buffer for reliable delivery."""
     try:
         subprocess.run(
-            ["tmux", "set-buffer", "-b", "warroom", text],
+            [TMUX_BIN, "set-buffer", "-b", "warroom", text],
             capture_output=True,
             timeout=5,
         )
         subprocess.run(
-            ["tmux", "paste-buffer", "-b", "warroom", "-t", session_name],
+            [TMUX_BIN, "paste-buffer", "-b", "warroom", "-t", session_name],
             capture_output=True,
             timeout=5,
         )
@@ -444,7 +455,7 @@ def send_to_tmux(session_name: str, text: str):
         import time as _t
         _t.sleep(0.5)
         subprocess.run(
-            ["tmux", "send-keys", "-t", session_name, "Enter"],
+            [TMUX_BIN, "send-keys", "-t", session_name, "Enter"],
             capture_output=True,
             timeout=5,
         )
@@ -605,7 +616,7 @@ def reconcile_tmux_sessions():
     """On boot, discover orphaned warroom-* tmux sessions and adopt them."""
     try:
         result = subprocess.run(
-            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            [TMUX_BIN, "list-sessions", "-F", "#{session_name}"],
             capture_output=True, text=True, timeout=5,
         )
         if result.returncode != 0:
@@ -623,7 +634,7 @@ def reconcile_tmux_sessions():
             pane_dir = PROJECT_PATH
             try:
                 dir_result = subprocess.run(
-                    ["tmux", "display-message", "-t", session_name, "-p", "#{pane_current_path}"],
+                    [TMUX_BIN, "display-message", "-t", session_name, "-p", "#{pane_current_path}"],
                     capture_output=True, text=True, timeout=2,
                 )
                 if dir_result.returncode == 0 and dir_result.stdout.strip():
@@ -1042,7 +1053,7 @@ async def agent_remove(agent_name: str):
     session = AGENT_SESSIONS.get(agent_name, f"warroom-{agent_name}")
 
     # Kill tmux session
-    subprocess.run(["tmux", "kill-session", "-t", session], capture_output=True, timeout=5)
+    subprocess.run([TMUX_BIN, "kill-session", "-t", session], capture_output=True, timeout=5)
 
     # Remove from all in-memory stores
     AGENT_NAMES.discard(agent_name)
@@ -1086,18 +1097,18 @@ async def recover_agent(agent_name: str):
     skip_perms = config.get("skip_permissions", True)
 
     try:
-        subprocess.run(["tmux", "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "-c", agent_dir], check=True, capture_output=True, timeout=5)
-        subprocess.run(["tmux", "set-option", "-t", session, "mouse", "on"], capture_output=True, timeout=2)
-        subprocess.run(["tmux", "set-option", "-t", session, "history-limit", "10000"], capture_output=True, timeout=2)
-        subprocess.run(["tmux", "rename-window", "-t", session, agent_name], capture_output=True, timeout=2)
-        subprocess.run(["tmux", "send-keys", "-t", session, f"export WARROOM_AGENT_NAME={agent_name}", "Enter"], capture_output=True, timeout=2)
+        subprocess.run([TMUX_BIN, "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "-c", agent_dir], check=True, capture_output=True, timeout=5)
+        subprocess.run([TMUX_BIN, "set-option", "-t", session, "mouse", "on"], capture_output=True, timeout=2)
+        subprocess.run([TMUX_BIN, "set-option", "-t", session, "history-limit", "10000"], capture_output=True, timeout=2)
+        subprocess.run([TMUX_BIN, "rename-window", "-t", session, agent_name], capture_output=True, timeout=2)
+        subprocess.run([TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_AGENT_NAME={agent_name}", "Enter"], capture_output=True, timeout=2)
         await asyncio.sleep(0.5)
 
         model_flag = f"--model {model}" if model != "opus" else ""
         perms_flag = "--dangerously-skip-permissions" if skip_perms else ""
         cmd = f"cd {agent_dir} && claude {model_flag} {perms_flag}".strip()
         cmd = " ".join(cmd.split())
-        subprocess.run(["tmux", "send-keys", "-t", session, cmd, "Enter"], capture_output=True, timeout=2)
+        subprocess.run([TMUX_BIN, "send-keys", "-t", session, cmd, "Enter"], capture_output=True, timeout=2)
 
         for _ in range(15):
             await asyncio.sleep(2)
@@ -1112,7 +1123,7 @@ async def recover_agent(agent_name: str):
 
         return {"status": "recovered", "agent": agent_name, "warning": "Conversation context was lost — agent starts fresh"}
     except subprocess.CalledProcessError as e:
-        subprocess.run(["tmux", "kill-session", "-t", session], capture_output=True)
+        subprocess.run([TMUX_BIN, "kill-session", "-t", session], capture_output=True)
         return JSONResponse({"error": f"Recovery failed: {e}"}, status_code=500)
 
 
@@ -1184,7 +1195,7 @@ async def create_agent(req: AgentCreate):
     try:
         # Create tmux session
         subprocess.run(
-            ["tmux", "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "-c", agent_dir],
+            [TMUX_BIN, "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "-c", agent_dir],
             check=True,
             capture_output=True,
             timeout=5,
@@ -1192,24 +1203,24 @@ async def create_agent(req: AgentCreate):
 
         # Configure tmux session
         subprocess.run(
-            ["tmux", "set-option", "-t", session, "mouse", "on"],
+            [TMUX_BIN, "set-option", "-t", session, "mouse", "on"],
             capture_output=True,
             timeout=2,
         )
         subprocess.run(
-            ["tmux", "set-option", "-t", session, "history-limit", "10000"],
+            [TMUX_BIN, "set-option", "-t", session, "history-limit", "10000"],
             capture_output=True,
             timeout=2,
         )
         subprocess.run(
-            ["tmux", "rename-window", "-t", session, req.name],
+            [TMUX_BIN, "rename-window", "-t", session, req.name],
             capture_output=True,
             timeout=2,
         )
 
         # Set env var so Claude Code knows its agent name
         subprocess.run(
-            ["tmux", "send-keys", "-t", session, f"export WARROOM_AGENT_NAME={req.name}", "Enter"],
+            [TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_AGENT_NAME={req.name}", "Enter"],
             capture_output=True,
             timeout=2,
         )
@@ -1221,7 +1232,7 @@ async def create_agent(req: AgentCreate):
         cmd = f"cd {agent_dir} && claude {model_flag} {perms_flag}".strip()
         cmd = " ".join(cmd.split())
         subprocess.run(
-            ["tmux", "send-keys", "-t", session, cmd, "Enter"],
+            [TMUX_BIN, "send-keys", "-t", session, cmd, "Enter"],
             capture_output=True,
             timeout=2,
         )
@@ -1301,7 +1312,7 @@ async def create_agent(req: AgentCreate):
     except subprocess.CalledProcessError as e:
         # Clean up on failure
         subprocess.run(
-            ["tmux", "kill-session", "-t", session],
+            [TMUX_BIN, "kill-session", "-t", session],
             capture_output=True,
         )
         return JSONResponse(
@@ -1326,7 +1337,7 @@ async def agent_attach(agent_name: str):
     try:
         # Set tmux window title so Warp tab shows agent name
         subprocess.run(
-            ["tmux", "rename-window", "-t", session, agent_name],
+            [TMUX_BIN, "rename-window", "-t", session, agent_name],
             capture_output=True, timeout=2,
         )
 
@@ -1384,7 +1395,7 @@ async def server_health():
     # Degraded state detection: tmux sessions exist but server has 0 agents
     try:
         tmux_result = subprocess.run(
-            ["tmux", "list-sessions", "-F", "#{session_name}"],
+            [TMUX_BIN, "list-sessions", "-F", "#{session_name}"],
             capture_output=True, text=True, timeout=3,
         )
         orphan_count = sum(1 for line in tmux_result.stdout.strip().split("\n")
