@@ -1,57 +1,9 @@
 # Coders War Room — Agent Configuration
 # Updated: 2026-04-03
-# Model: Six-role pipeline (replaces phase-based model)
+# Model: Dynamic onboarding via web UI
+# Agents are created from the web UI with role presets — no permanent roster needed.
 
 port: 5680
 project_path: ~/contextualise
 
-agents:
-  - name: supervisor
-    role: "Strategic brain. Reads Jira, decomposes work into task briefs using Sequential Thinking, assigns to pipeline agents, reviews QA reports, approves merges, maintains context-spec.yaml and PROJECT_STATUS.md. Never writes code."
-    tmux_session: warroom-supervisor
-    auto_onboard: false
-    role_type: supervisor
-    instructions: SUPERVISOR_INSTRUCTIONS.md
-    owns: []
-
-  - name: scout
-    role: "Research and investigation. Analyses code, maps blast radius, verifies dependencies (slopsquatting defence), produces research ledgers at docs/research/. Works ahead of Engineers — always researching the next task. Never writes code."
-    tmux_session: warroom-scout
-    role_type: scout
-    instructions: SCOUT_INSTRUCTIONS.md
-    owns: []
-
-  - name: engineer-1
-    role: "Implementation. Receives task brief + research ledger, works in isolated git worktree, follows Superpowers TDD workflow, produces tested code on feature branches. May run in parallel with engineer-2 on independent tasks."
-    tmux_session: warroom-engineer-1
-    role_type: engineer
-    instructions: ENGINEER_INSTRUCTIONS.md
-    owns: []
-
-  - name: engineer-2
-    role: "Implementation (parallel). Same as engineer-1 but for independent concurrent tasks. Only activated when the Supervisor assigns parallel work. Operates in a separate worktree."
-    tmux_session: warroom-engineer-2
-    role_type: engineer
-    instructions: ENGINEER_INSTRUCTIONS.md
-    owns: []
-
-  - name: qa
-    role: "Quality gate. Runs full verification suite (pytest, flake8, mypy, bandit) plus blast radius checks. Produces QA reports at docs/qa/. Verdict is PASS or FAIL with evidence — no soft passes. Never writes code."
-    tmux_session: warroom-qa
-    role_type: qa
-    instructions: QA_INSTRUCTIONS.md
-    owns: []
-
-  - name: git-agent
-    role: "Persistence backbone. Handles all git operations: commits, branches, merges, cleanup. Activated at six commit points per task lifecycle. Runs test gate before every merge to main. Never writes code. Never merges without Supervisor approval. Never force-pushes without Gurvinder's direct confirmation."
-    tmux_session: warroom-git-agent
-    role_type: git-agent
-    instructions: GIT_AGENT_INSTRUCTIONS.md
-    owns: []
-
-  - name: chronicler
-    role: "Silent observer. Reads War Room history, research ledgers, QA reports, and git log. Produces weekly learnings reports at docs/chronicler/. Detects spec drift, regression patterns, tool usage, and process friction. Proposes guardrail revisions. Never participates in the active pipeline."
-    tmux_session: warroom-chronicler
-    role_type: chronicler
-    instructions: CHRONICLER_INSTRUCTIONS.md
-    owns: []
+agents: []
