@@ -355,6 +355,10 @@ def send_to_tmux(session_name: str, text: str):
             capture_output=True,
             timeout=5,
         )
+        # Delay before Enter — Claude Code's TUI needs time to process pasted text
+        # Without this, the Enter keystroke fires before the paste is fully rendered
+        import time as _t
+        _t.sleep(0.5)
         subprocess.run(
             ["tmux", "send-keys", "-t", session_name, "Enter"],
             capture_output=True,
