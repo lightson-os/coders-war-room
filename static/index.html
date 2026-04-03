@@ -1685,7 +1685,7 @@ function connect() {
   ws.onerror = () => ws.close();
   ws.onmessage = (e) => {
     const d = JSON.parse(e.data);
-    if (d.type === 'history') { $msgs.innerHTML = ''; lastSender = null; d.messages.forEach(renderMsg); scrollEnd(); }
+    if (d.type === 'history') { $msgs.innerHTML = ''; lastSender = null; lastTimestamp = null; d.messages.forEach(renderMsg); scrollEnd(); }
     else if (d.type === 'message') { renderMsg(d.message); scrollEnd(); }
     else if (d.type === 'agent_status') {
       if (d.server) {
@@ -1724,43 +1724,124 @@ function connect() {
 
 // ═══════════ Messages ═══════════
 let lastSender = null;
+let lastTimestamp = null;
+
+function formatTimeDivider(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.floor((today - msgDay) / 86400000);
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function formatTimeShort(dateStr) {
+  const d = new Date(dateStr);
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
+}
+
+function shouldShowTimeDivider(prevTs, currTs) {
+  if (!prevTs || !currTs) return false;
+  const prev = new Date(prevTs);
+  const curr = new Date(currTs);
+  if (prev.toDateString() !== curr.toDateString()) return true;
+  return (curr - prev) > 300000;
+}
+
+function isSameGroup(prevSender, prevTs, currSender, currTs) {
+  if (prevSender !== currSender) return false;
+  if (!prevTs || !currTs) return false;
+  return (new Date(currTs) - new Date(prevTs)) < 20000;
+}
 
 function renderMsg(m) {
-  const el = document.createElement('div');
   const isSystem = m.type === 'system';
   const isDirect = !isSystem && m.target !== 'all';
-  const baseClass = isSystem ? 'msg system' : isDirect ? 'msg direct' : 'msg';
+  const isUser = !isSystem && m.sender === 'gurvinder';
+  const isMobile = window.innerWidth < 768;
+
+  // Time divider check (mobile only)
+  if (isMobile && !isSystem && m.timestamp && shouldShowTimeDivider(lastTimestamp, m.timestamp)) {
+    const divider = document.createElement('div');
+    divider.className = 'time-divider';
+    const dividerText = formatTimeDivider(m.timestamp);
+    const timeText = formatTimeShort(m.timestamp);
+    divider.textContent = dividerText === 'Today' ? timeText : `${dividerText} ${timeText}`;
+    $msgs.appendChild(divider);
+  }
+
+  const el = document.createElement('div');
 
   if (isSystem) {
-    el.className = baseClass;
+    el.className = 'msg system';
     el.textContent = m.content;
     lastSender = null;
-  } else {
-    // Message grouping: if same sender as previous, collapse header
-    const sameSender = m.sender === lastSender;
-    if (sameSender) {
-      el.className = `${baseClass} grouped`;
-      // Also mark the previous message as group-start if it's standalone
-      const prev = $msgs.lastElementChild;
-      if (prev && prev.classList.contains('standalone')) {
-        prev.classList.remove('standalone');
-        prev.classList.add('group-start');
-      }
-    } else {
-      el.className = `${baseClass} standalone`;
-    }
-
-    const ts = m.timestamp ? m.timestamp.slice(11, 19) : '';
-    const tag = isDirect ? `<span class="msg-tag">@${esc(m.target)}</span>` : '';
-    // Dynamic border-left color matching the sender's agent color
-    el.style.borderLeftColor = color(m.sender);
-    el.innerHTML = `<div class="msg-head"><span class="msg-sender" style="color:${color(m.sender)}">${esc(m.sender)}</span>${tag}<span class="msg-time">${ts}</span></div><div class="msg-body">${esc(m.content)}</div>`;
-    lastSender = m.sender;
+    lastTimestamp = m.timestamp || null;
+    $msgs.appendChild(el);
+    return;
   }
+
+  // Grouping logic
+  const grouped = isSameGroup(lastSender, lastTimestamp, m.sender, m.timestamp);
+
+  // Build class list
+  let cls = 'msg';
+  if (isUser && isMobile) cls += ' msg-user';
+  if (isDirect) cls += ' direct';
+  if (grouped) {
+    cls += ' grouped';
+    const prev = $msgs.lastElementChild;
+    if (prev && prev.classList.contains('standalone')) {
+      prev.classList.remove('standalone');
+      prev.classList.add('group-start');
+    }
+  } else {
+    cls += ' standalone';
+  }
+  el.className = cls;
+
+  // Border color for agent messages
+  if (!isUser || !isMobile) {
+    el.style.borderLeftColor = color(m.sender);
+  }
+
+  // Timestamp
+  const ts = m.timestamp ? m.timestamp.slice(11, 19) : '';
+  const tag = isDirect ? `<span class="msg-tag">@${esc(m.target)}</span>` : '';
+
+  // Build inner HTML
+  let html = '';
+  html += `<div class="msg-head">`;
+  html += `<span class="msg-sender" style="color:${color(m.sender)}">${esc(m.sender)}</span>`;
+  html += tag;
+  html += `<span class="msg-time">${ts}</span>`;
+  html += `</div>`;
+  html += `<div class="msg-body">${esc(m.content)}</div>`;
+
+  // User messages on mobile get timestamp below the bubble
+  if (isUser && isMobile) {
+    const shortTime = m.timestamp ? formatTimeShort(m.timestamp) : ts;
+    html += `<span class="msg-time-below">${shortTime}</span>`;
+  }
+
+  el.innerHTML = html;
+
+  lastSender = m.sender;
+  lastTimestamp = m.timestamp || null;
+
   $msgs.appendChild(el);
 
   // Image preview for uploaded files
-  if (!isSystem && m.content && m.content.includes('[uploaded:')) {
+  if (m.content && m.content.includes('[uploaded:')) {
     const match = m.content.match(/\[uploaded:\s*([^\]]+)\]/);
     if (match) {
       const filePath = match[1].trim();
