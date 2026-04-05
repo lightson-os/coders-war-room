@@ -390,7 +390,6 @@ body::before {
 .msg-row { margin-bottom: 2px; animation: fadein 0.15s ease-out; }
 @keyframes fadein { from { opacity: 0; transform: translateY(3px); } }
 .msg-row.standalone { margin-top: 10px; }
-.msg-row.group-start { margin-top: 10px; }
 .msg-row.grouped { margin-top: 0; }
 .msg-row.system { align-self: center; color: var(--ns-text-dim); font-family: var(--font-data); font-size: 11px; font-style: italic; padding: 3px 0; margin: 6px 0; }
 
@@ -1200,8 +1199,10 @@ function scrollForce() { $msgs.scrollTop = $msgs.scrollHeight; }
 function sendMsg() {
   const text = $inp.value.trim();
   if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
-  ws.send(JSON.stringify({ sender: 'gurvinder', target: $tgt.value, content: text, type: 'message' }));
   renderMsg({ sender: 'gurvinder', target: $tgt.value, content: text, type: 'message', timestamp: new Date().toISOString() });
+  try {
+    ws.send(JSON.stringify({ sender: 'gurvinder', target: $tgt.value, content: text, type: 'message' }));
+  } catch (err) { console.warn('ws.send failed:', err); }
   scrollForce();
   $inp.value = '';
   $inp.style.height = 'auto';
@@ -1316,7 +1317,7 @@ function resolveColor(agent) {
     if (name.includes(kw)) return c;
   }
   // NS-palette-only hash fallback
-  const palette = ['#4285F4','#34A853','#FBBC05','#E57373','#b388ff','#ff9100','#EA4335','#18ffff'];
+  const palette = ['#4285F4','#34A853','#FBBC05','#E57373','#b388ff','#ff9100','#EA4335','#F2F2F7'];
   let h = 0;
   for (let i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
   return palette[Math.abs(h) % palette.length];
@@ -1477,9 +1478,11 @@ window.renderAgents = function renderAgents() {
         card.classList.add('reorder-over');
       }
     });
-    card.addEventListener('dragleave', () => {
-      card.classList.remove('drop-active');
-      card.classList.remove('reorder-over');
+    card.addEventListener('dragleave', e => {
+      if (!card.contains(e.relatedTarget)) {
+        card.classList.remove('drop-active');
+        card.classList.remove('reorder-over');
+      }
     });
     card.addEventListener('drop', e => {
       card.classList.remove('reorder-over');
