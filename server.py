@@ -573,12 +573,12 @@ async def flush_queues_loop():
 
 
 async def agent_status_loop():
-    """Background: push rich agent status (config + auto + manual) every 2s."""
+    """Background: push rich agent status (config + auto + manual) every 10s."""
     commit_counter = 0
     while True:
-        await asyncio.sleep(2)
+        await asyncio.sleep(10)
         commit_counter += 1
-        if commit_counter >= 15:  # Refresh git commits every 30s
+        if commit_counter >= 3:  # Refresh git commits every 30s
             commit_counter = 0
             refresh_last_commits()
 
