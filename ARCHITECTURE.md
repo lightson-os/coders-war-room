@@ -11,9 +11,9 @@ The Coder's War Room is a local real-time coordination system for multiple Claud
 Single-file server (~1300 lines) handling:
 
 - **REST API** — CRUD for messages, agents, files, server management
-- **WebSocket** — real-time push to web UI clients (agent status every 2s, messages instantly)
+- **WebSocket** — real-time push to web UI clients (agent status every 10s, messages instantly)
 - **tmux Dispatch** — delivers messages to agent sessions via `set-buffer` + `paste-buffer`
-- **Background Loops** — queue flushing (2s), agent status (2s), git commit refresh (30s)
+- **Background Loops** — queue flushing (2s), agent status (10s), git commit refresh (30s)
 - **SQLite** — message persistence with WAL mode for concurrent access
 
 #### Key Design Decisions
@@ -40,7 +40,7 @@ Single-file vanilla HTML/CSS/JS (~2100 lines). No frameworks, no build step.
 Server → Client:
   {type: "history", messages: [...]}        — on connect
   {type: "message", message: {...}}         — new message
-  {type: "agent_status", server: {...}, agents: {...}}  — every 2s
+  {type: "agent_status", server: {...}, agents: {...}}  — every 10s
   {type: "membership", agent: "...", in_room: bool}     — de/reboard
   {type: "agent_created", agent: {...}}     — new agent
   {type: "agent_removed", agent: "..."}     — agent deleted
@@ -83,7 +83,7 @@ Bash script that agents call to interact with the war room. Identity is auto-det
 ### Agent Status Flow
 
 ```
-Every 2 seconds:
+Every 10 seconds:
 1. For each agent, capture tmux pane → parse activity
 2. Check for busy indicators (spinners, "Thinking")
 3. Check for staleness (5+ min same tool+file)
