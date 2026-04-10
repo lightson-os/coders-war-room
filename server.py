@@ -110,6 +110,8 @@ agent_config: dict[str, dict] = {}
 
 # Server startup timestamp
 SERVER_START_TIME = time.time()
+SESSION_TTL_SECONDS = 7200  # 2 hours — warn agent to start fresh session
+SESSION_TTL_WARNED: set = set()  # Track agents who have already been warned
 
 STATUS_TTL_SECONDS = 1800  # 30 minutes
 STALE_THRESHOLD_SECONDS = 300  # 5 minutes
@@ -625,6 +627,21 @@ async def agent_status_loop():
                 "stalled_minutes": stalled_minutes,
                 "last_commit": last_commit,
             }
+
+        # Session TTL check — warn agents who have been running > 2 hours
+        for a in AGENTS:
+            name = a["name"]
+            launched = a.get("launched_at")
+            if launched and name not in SESSION_TTL_WARNED:
+                elapsed = time.time() - launched
+                if elapsed > SESSION_TTL_SECONDS:
+                    SESSION_TTL_WARNED.add(name)
+                    ttl_msg = (
+                        f"[SYSTEM] SESSION-TTL: 2hr elapsed for {name}. "
+                        "Unbounded context degrades reasoning. "
+                        "Commit any working notes to git first, then start a fresh Claude Code session."
+                    )
+                    await store_message("system", ttl_msg, session_id="__system__")
 
         uptime_s = int(time.time() - SERVER_START_TIME)
         hours, remainder = divmod(uptime_s, 3600)
@@ -1338,8 +1355,10 @@ async def create_agent(req: AgentCreate):
             "dynamic": True,
             "color": req.color,
             "icon": req.icon,
+            "launched_at": time.time(),
         }
         AGENTS.append(agent_entry)
+        SESSION_TTL_WARNED.discard(req.name)
         AGENT_NAMES.add(req.name)
         AGENT_SESSIONS[req.name] = session
         AGENT_DIRS[req.name] = agent_dir
