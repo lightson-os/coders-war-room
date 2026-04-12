@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>War Room</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="manifest" href="/manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -171,9 +171,9 @@
   .ac {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 6px;
+    border-radius: var(--radius-card);
+    padding: var(--padding-card);
+    margin-bottom: 8px;
     transition: border-color 0.2s, background 0.2s;
   }
 
@@ -2037,6 +2037,12 @@
     background: radial-gradient(circle at top left, var(--domain-evolution-glow), transparent);
     pointer-events: none;
   }
+  .gate-card.gate-pass::before {
+    background: radial-gradient(circle at top left, rgba(50, 215, 75, 0.08), transparent);
+  }
+  .gate-card.gate-fail::before {
+    background: radial-gradient(circle at top left, rgba(255, 69, 58, 0.08), transparent);
+  }
 
   .gate-card-title {
     font-family: var(--font-system);
@@ -3089,6 +3095,31 @@ function updateAgentGateStatus(agentName) {
   }
 }
 
+// ═══════════ Load Historical Hook Events on Init ═══════════
+async function loadHistoricalHookEvents() {
+  try {
+    for (const agent of agentRoster) {
+      const res = await fetch(`/api/agents/${agent.name}/hook-events?limit=50`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!agentHookEvents[agent.name]) agentHookEvents[agent.name] = {};
+      // Events are newest-first; process oldest-first so latest wins
+      for (const ev of (data.events || []).reverse()) {
+        if (ev.tool) {
+          agentHookEvents[agent.name][ev.tool] = {
+            exit_code: ev.exit_code,
+            summary: ev.summary,
+            timestamp: ev.timestamp
+          };
+        }
+      }
+      updateAgentGateStatus(agent.name);
+    }
+  } catch (e) {
+    console.warn('Failed to load historical hook events:', e);
+  }
+}
+
 // ═══════════ Gates Dashboard ═══════════
 async function loadGatesDashboard() {
   const grid = document.getElementById('gatesGrid');
@@ -3119,7 +3150,12 @@ async function loadGatesDashboard() {
     while (grid.firstChild) grid.removeChild(grid.firstChild);
     for (const [gateName, tools] of Object.entries(gates)) {
       const card = document.createElement('div');
-      card.className = 'gate-card';
+      // Determine overall gate status for glow color
+      const toolStatuses = tools.map(t => toolStatus[t]);
+      const anyFail = toolStatuses.some(s => s && s.exit_code !== 0);
+      const allRun = toolStatuses.every(s => s);
+      const gateState = anyFail ? 'gate-fail' : (allRun ? 'gate-pass' : '');
+      card.className = 'gate-card ' + gateState;
 
       const titleEl = document.createElement('div');
       titleEl.className = 'gate-card-title';
@@ -3927,7 +3963,7 @@ if ($attachBtn) {
           const fd = new FormData();
           fd.append('file', f);
           try {
-            const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+            const resp = await fetch('/api/files/upload', { method: 'POST', body: fd });
             const data = await resp.json();
             if (data.path) {
               // Show attachment chip instead of inline text
@@ -4014,6 +4050,8 @@ fetch('/api/agents').then(r => r.json()).then(agents => {
     } catch(e) {}
   }
   renderAgents();
+  // Fetch historical hook events so agent cards show gate status on load
+  loadHistoricalHookEvents();
 }).catch(() => {});
 connect();
 
@@ -4052,7 +4090,7 @@ initFileTree();
       formData.append('file', file);
 
       try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await fetch('/api/files/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.filename) {
           addFilePill(data.filename, file.type);
