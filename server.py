@@ -1,5 +1,7 @@
 import asyncio
+import hashlib
 import json
+import os
 import re
 import subprocess
 import time
@@ -15,6 +17,7 @@ from fastapi import FastAPI, Request, UploadFile, File as FastAPIFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
+from settings_generator import write_settings
 
 # ---------------------------------------------------------------------------
 # Config
@@ -779,6 +782,30 @@ async def broadcast_ws(data: dict, exclude: Optional[WebSocket] = None):
                 connected_clients.remove(client)
 
 
+def validate_registry_sync() -> bool:
+    """Check if registries have changed since last skill generation."""
+    registry_dir = os.path.join(os.path.dirname(__file__), "registries")
+    gen_file = os.path.join(registry_dir, ".last-generated.json")
+
+    if not os.path.exists(gen_file):
+        print("[REGISTRY] No .last-generated.json found — skill generation has never been run")
+        return False
+
+    with open(gen_file) as f:
+        last_hashes = json.load(f)
+
+    for reg_name in ["gate-registry", "role-registry", "hook-registry", "tool-budget-registry"]:
+        reg_path = os.path.join(registry_dir, f"{reg_name}.yaml")
+        if not os.path.exists(reg_path):
+            continue
+        with open(reg_path, "rb") as f:
+            current_hash = hashlib.sha256(f.read()).hexdigest()
+        if current_hash != last_hashes.get(reg_name):
+            print(f"[REGISTRY DRIFT] {reg_name}.yaml changed since last skill generation. Run: python skill-engine/generate.py --all")
+            return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
@@ -800,6 +827,8 @@ async def lifespan(app: FastAPI):
                 "skip_permissions": True,
             }
     refresh_last_commits()
+    if not validate_registry_sync():
+        print("[REGISTRY DRIFT] Registries updated since last skill generation")
     task1 = asyncio.create_task(flush_queues_loop())
     task2 = asyncio.create_task(agent_status_loop())
     task3 = asyncio.create_task(auto_reconcile_loop())
@@ -1332,7 +1361,24 @@ async def create_agent(req: AgentCreate):
             capture_output=True,
             timeout=2,
         )
+
+        # Set WARROOM_ROLE_TYPE for session-start.sh skill invocation
+        role_type = req.role_type or req.name
+        subprocess.run(
+            [TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_ROLE_TYPE='{role_type}'", "Enter"],
+            capture_output=True,
+            timeout=2,
+        )
         await asyncio.sleep(0.5)
+
+        # Generate role-specific .claude/settings.local.json
+        role_type = req.role_type or req.name
+        if role_type:
+            try:
+                settings_path = write_settings(role_type, agent_dir)
+                print(f"[SETTINGS] Generated settings for {req.name}: {settings_path}")
+            except Exception as e:
+                print(f"[SETTINGS] Failed to generate settings for {req.name}: {e}")
 
         # Start Claude Code
         model_flag = f"--model {req.model}" if req.model != "opus" else ""
