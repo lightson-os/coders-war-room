@@ -1,0 +1,106 @@
+# registries/gate-registry.yaml
+# Authoritative map: gate → tools → disposition → agent → accountability
+# Adding a tool = add an entry here. CI, qa-suite, hooks, skills, UI all read this.
+
+gates:
+  gate-1-deterministic:
+    name: "Risk Regression Suite"
+    level: sprint
+    also_runs: per-story
+    retry_ceiling: 2
+    failure_signal: "[GATE-1 FAIL]"
+    escalation_signal: "[GATE-1 FAIL | ESCALATE]"
+    human_signal: "[GATE-1 | HUMAN REQUIRED]"
+    owner_on_fail: engineer
+    escalation_to: supervisor
+    tools:
+      - id: pytest
+        command: "python -m pytest tests/ -q --tb=short"
+        json_flag: "--json-report --json-report-file=gate1-pytest.json"
+        disposition: block
+        threshold: "exit_code == 0"
+        agent: [engineer, qa]
+      - id: flake8
+        command: "flake8 . --max-line-length=100 --exclude=venv,__pycache__"
+        disposition: block
+        threshold: "no_output"
+        agent: [engineer, qa]
+      - id: mypy
+        command: "mypy . --ignore-missing-imports --exclude venv"
+        disposition: warn
+        threshold: "no_errors"
+        agent: [engineer, qa]
+      - id: bandit
+        command: "bandit -r . --exclude ./venv,./tests -ll"
+        json_flag: "-f json -o gate1-bandit.json"
+        disposition: block
+        threshold: "no_high_severity"
+        agent: [qa]
+      - id: pip-audit
+        command: "pip-audit -r requirements.txt"
+        json_flag: "-f json -o gate1-pip-audit.json"
+        disposition: warn
+        threshold: "no_critical"
+        agent: [qa]
+      - id: coverage
+        command: "pytest --cov=. --cov-fail-under={threshold}"
+        disposition: block
+        threshold: "90"
+        per_story_threshold: "85"
+        agent: [qa]
+      - id: secret-scan
+        command: "scripts/check-secrets.sh"
+        disposition: block
+        agent: [engineer, qa]
+
+  gate-2-integration:
+    name: "Fly.io Integration Smoke"
+    level: sprint
+    retry_ceiling: 1
+    failure_signal: "[GATE-2 FAIL]"
+    owner_on_fail: scout
+    escalation_to: supervisor
+    skip_condition: "no_python_changes"
+    stall_detection:
+      threshold_minutes: 10
+      action: "escalate_to_supervisor"
+    tools:
+      - id: flyctl-deploy
+        command: "flyctl deploy --app agentik-staging --remote-only --strategy rolling"
+        disposition: block
+        timeout: 120
+      - id: health-poll
+        command: "scripts/health-poll.sh"
+        disposition: block
+        timeout: 90
+        config:
+          url: "https://agentik-staging.fly.dev/health"
+          max_retries: 8
+          backoff: "linear_5s"
+      - id: sentry-check
+        command: "scripts/sentry-staging-check.sh"
+        disposition: warn
+
+  gate-3-ai-review:
+    name: "AI Architecture Review"
+    level: sprint
+    retry_ceiling: 0
+    failure_signal: "[GATE-3 FAIL]"
+    owner_on_fail: supervisor
+    escalation_to: gurvinder
+    tools:
+      - id: greptile
+        command: "scripts/gate3-greptile.py"
+        disposition: block
+        mode: advisory
+        requires_secret: GREPTILE_API_KEY
+      - id: coderabbit-cli
+        command: "coderabbit review --plain"
+        disposition: block
+        mode: advisory
+        budget: "5/hr rolling"
+      - id: claude-review
+        command: "scripts/gate3-claude-review.py"
+        disposition: advisory
+        mode: verdict
+        requires_secret: ANTHROPIC_API_KEY

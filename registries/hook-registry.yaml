@@ -1,0 +1,60 @@
+# registries/hook-registry.yaml
+# Hook templates referenced by role-registry.yaml
+# Adding a hook = add a template here, reference it in the role's hooks list
+
+templates:
+  base-hooks:
+    description: "All agents — inbox polling, skill loading, critical message check"
+    hooks:
+      SessionStart:
+        - type: command
+          command: "hooks/session-start.sh"
+      PreToolUse:
+        - matcher: "Bash"
+          type: command
+          command: "hooks/check-warroom-inbox.sh"
+      Stop:
+        - type: command
+          command: "hooks/stop-guard-warroom.sh"
+
+  no-code-hooks:
+    description: "Blocks Write/Edit for non-coding roles"
+    hooks:
+      PreToolUse:
+        - matcher: "Write|Edit"
+          type: command
+          command: "hooks/block-code-writes.sh"
+
+  engineer-stop-gate:
+    description: "Tests must pass before Engineer can stop"
+    hooks:
+      Stop:
+        - type: command
+          command: "hooks/engineer-quality-gate.sh"
+          timeout: 120
+
+  qa-stop-gate:
+    description: "qa-suite.sh must have run before QA can stop"
+    hooks:
+      Stop:
+        - type: command
+          command: "hooks/qa-quality-gate.sh"
+          timeout: 30
+
+  merge-block-gate:
+    description: "Blocks merge/push main without QA PASS"
+    hooks:
+      PreToolUse:
+        - matcher: "Bash"
+          type: command
+          command: "hooks/verify-qa-before-merge.sh"
+
+  post-edit-lint:
+    description: "Auto-lint after file writes"
+    hooks:
+      PostToolUse:
+        - matcher: "Edit|Write"
+          type: command
+          command: "hooks/post-edit-lint.sh"
+          async: true
+          timeout: 15

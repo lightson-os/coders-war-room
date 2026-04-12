@@ -1,0 +1,187 @@
+# registries/role-registry.yaml
+# Authoritative map: role → skill → hooks → tools → model → gate accountability
+# Adding a role = add an entry here + run skill-engine/generate.py --role <name>
+
+roles:
+  supervisor:
+    display_name: "Supervisor"
+    icon: "crown"
+    color: "#a86fdf"
+    description: "Strategic orchestrator. Decomposes stories, assigns work, approves merges."
+    model_hint: "opus"
+    model_hint_label: null
+    skill: "supervisor-role"
+    working_directory: "~/contextualise"
+    writes_code: false
+    allowed_tools:
+      - "Read"
+      - "Grep"
+      - "Glob"
+      - "Bash(git log *)"
+      - "Bash(git status)"
+    disallowed_tools:
+      - "Write"
+      - "Edit"
+    hooks:
+      - template: base-hooks
+      - template: no-code-hooks
+    gates_accountable_for: []
+    gates_routes_on_fail: [gate-1, gate-2, gate-3]
+    startup_checklist:
+      - "Read docs/PROJECT_STATUS.md"
+      - "Check Jira via MCP"
+      - "Run warroom.sh history"
+      - "Read latest docs/chronicler/ file"
+
+  scout:
+    display_name: "Scout"
+    icon: "magnifyingglass"
+    color: "#a86fdf"
+    description: "Research and investigation. Code analysis, blast radius, Figma specs."
+    model_hint: "opus"
+    model_hint_label: null
+    skill: "scout-role"
+    working_directory: "~/contextualise"
+    writes_code: false
+    allowed_tools:
+      - "Read"
+      - "Grep"
+      - "Glob"
+      - "Bash(git *)"
+      - "Bash(find *)"
+    disallowed_tools:
+      - "Write"
+      - "Edit"
+    hooks:
+      - template: base-hooks
+      - template: no-code-hooks
+    gates_accountable_for: []
+    gates_investigates_on_fail: [gate-2]
+
+  engineer:
+    display_name: "Engineer"
+    icon: "hammer"
+    color: "#a86fdf"
+    description: "Implementation with TDD. Writes code, writes tests, hands clean builds to QA."
+    model_hint: "opus"
+    model_hint_label: null
+    skill: "engineer-role"
+    working_directory: "~/contextualise"
+    writes_code: true
+    allowed_tools: "*"
+    disallowed_tools: []
+    hooks:
+      - template: base-hooks
+      - template: engineer-stop-gate
+      - template: post-edit-lint
+    gates_accountable_for: [gate-1]
+    gate_tools_in_pre_commit:
+      - pytest
+      - flake8
+      - mypy
+      - secret-scan
+
+  qa:
+    display_name: "QA"
+    icon: "checkmark.shield"
+    color: "#a86fdf"
+    description: "Quality gate. Two-lane routing. Produces PASS/FAIL verdicts with evidence."
+    model_hint: "sonnet"
+    model_hint_label: "Sonnet recommended — independent judgment from Engineer's Opus"
+    skill: "qa-role"
+    working_directory: "~/contextualise"
+    writes_code: false
+    allowed_tools:
+      - "Read"
+      - "Grep"
+      - "Glob"
+      - "Bash(pytest *)"
+      - "Bash(flake8 *)"
+      - "Bash(mypy *)"
+      - "Bash(bandit *)"
+      - "Bash(scripts/qa-suite.sh *)"
+      - "Bash(coderabbit *)"
+    disallowed_tools:
+      - "Write"
+      - "Edit"
+    hooks:
+      - template: base-hooks
+      - template: no-code-hooks
+      - template: qa-stop-gate
+    gates_accountable_for: [gate-1]
+    gate_tools_in_review:
+      - pytest
+      - flake8
+      - mypy
+      - bandit
+      - pip-audit
+      - coverage
+      - secret-scan
+      - qodo
+      - coderabbit-cli
+
+  git-agent:
+    display_name: "Git Agent"
+    icon: "arrow.triangle.branch"
+    color: "#a86fdf"
+    description: "Persistence backbone. Six commit points. Blocks merges without QA PASS."
+    model_hint: "opus"
+    model_hint_label: null
+    skill: "git-agent-role"
+    working_directory: "~/contextualise"
+    writes_code: false
+    allowed_tools:
+      - "Bash(git *)"
+      - "Bash(gh *)"
+      - "Read"
+    disallowed_tools:
+      - "Write"
+      - "Edit"
+    hooks:
+      - template: base-hooks
+      - template: no-code-hooks
+      - template: merge-block-gate
+
+  chronicler:
+    display_name: "Chronicler"
+    icon: "book.closed"
+    color: "#a86fdf"
+    description: "Silent observer. Drift detection, learnings, tool budget tracking."
+    model_hint: "opus"
+    model_hint_label: null
+    skill: "chronicler-role"
+    working_directory: "~/contextualise"
+    writes_code: false
+    allowed_tools:
+      - "Read"
+      - "Grep"
+      - "Glob"
+      - "Bash(git log *)"
+      - "Bash(git diff *)"
+    disallowed_tools:
+      - "Write"
+      - "Edit"
+    hooks:
+      - template: base-hooks
+      - template: no-code-hooks
+    monitors_budgets_for:
+      - qodo
+      - coderabbit-cli
+      - greptile
+
+  # Example: adding a new role
+  # ux-designer:
+  #   display_name: "UX Designer"
+  #   icon: "paintbrush"
+  #   color: "#a86fdf"
+  #   description: "Design specialist. Reads Figma, produces component specs."
+  #   model_hint: "opus"
+  #   model_hint_label: null
+  #   skill: "ux-designer-role"
+  #   working_directory: "~/contextualise"
+  #   writes_code: false
+  #   allowed_tools: ["Read", "Grep", "Glob", "Bash(stitch *)"]
+  #   disallowed_tools: ["Write", "Edit"]
+  #   hooks:
+  #     - template: base-hooks
+  #     - template: no-code-hooks
