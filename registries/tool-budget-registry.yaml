@@ -1,0 +1,30 @@
+# registries/tool-budget-registry.yaml
+# Chronicler reads this for weekly budget snapshots
+# Adding a paid tool = add an entry here
+
+budgets:
+  qodo:
+    display_name: "QODO CLI"
+    limit: 30
+    period: monthly
+    unit: "PRs"
+    alert_threshold: 24
+    lane_restriction: "full"
+  coderabbit-cli:
+    display_name: "CodeRabbit CLI"
+    limit: 5
+    period: hourly_rolling
+    unit: "reviews"
+    alert_threshold: 4
+    lane_restriction: "full"
+  greptile:
+    display_name: "Greptile"
+    cost_per_use: 0.45
+    unit: "queries"
+    period: per_sprint
+    alert_threshold: 5
+  claude-gate3:
+    display_name: "Claude API (Gate 3)"
+    cost_per_use: 0.02
+    unit: "reviews"
+    period: per_sprint

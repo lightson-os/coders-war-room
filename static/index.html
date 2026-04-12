@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>War Room</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="manifest" href="/manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,37 +13,64 @@
 <link rel="apple-touch-icon" href="/icon-192.png">
 <style>
   :root {
-    --bg-void: #060810;
-    --bg-deep: #0a0d14;
-    --bg-panel: #0e1119;
-    --bg-card: #121620;
-    --bg-card-hover: #171c28;
-    --bg-elevated: #1a2030;
-    --border: #1a2030;
-    --border-bright: #243044;
-    --text-primary: #d8dee8;
-    --text-secondary: #7a8a9e;
-    --text-dim: #3e4e64;
-    --green: #00e676;
-    --green-dim: rgba(0,230,118,0.12);
-    --yellow: #ffd740;
-    --yellow-dim: rgba(255,215,64,0.10);
+    /* North Star Design System v4.4 — Evolution Domain */
+    --void: #000000;
+    --container-low: #131313;
+    --container-high: #1B1B1B;
+    --text-primary: #F2F2F7;
+    --text-secondary: rgba(242, 242, 247, 0.6);
+    --text-faint: rgba(242, 242, 247, 0.3);
+    --domain-evolution: #a86fdf;
+    --domain-evolution-glow: rgba(168, 111, 223, 0.08);
+    --domain-evolution-neon: rgba(168, 111, 223, 0.15);
+    --trinity-approve: #32D74B;
+    --trinity-deny: #FF453A;
+    --trinity-modify: #FBBC05;
+    --radius-card: 14px;
+    --radius-pill: 9999px;
+    --padding-card: 24px;
+    --gap-items: 16px;
+    --grid: 8px;
+    --font-body: 'Source Sans 3', -apple-system, sans-serif;
+    --font-system: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-size-body: 17px;
+    --font-size-system: 11px;
+    --font-size-mono: 12px;
+    /* Elevation shadows */
+    --shadow-content: 0 4px 16px rgba(0, 0, 0, 0.06);
+    --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-navigation: 0 24px 60px rgba(0, 0, 0, 0.12);
+    /* Legacy aliases — keep existing CSS working */
+    --bg-void: #000000;
+    --bg-deep: #0a0a0a;
+    --bg-panel: #131313;
+    --bg-card: #131313;
+    --bg-card-hover: #1B1B1B;
+    --bg-elevated: #1B1B1B;
+    --border: #1B1B1B;
+    --border-bright: #2a2a2a;
+    --text-dim: rgba(242, 242, 247, 0.3);
+    --green: #32D74B;
+    --green-dim: rgba(50, 215, 75, 0.12);
+    --yellow: #FBBC05;
+    --yellow-dim: rgba(251, 188, 5, 0.10);
     --cyan: #18ffff;
-    --cyan-dim: rgba(24,255,255,0.10);
+    --cyan-dim: rgba(24, 255, 255, 0.10);
     --orange: #ff9100;
-    --orange-dim: rgba(255,145,0,0.08);
-    --red: #ff5252;
-    --red-dim: rgba(255,82,82,0.08);
+    --orange-dim: rgba(255, 145, 0, 0.08);
+    --red: #FF453A;
+    --red-dim: rgba(255, 69, 58, 0.08);
     --blue: #448aff;
-    --blue-dim: rgba(68,138,255,0.10);
-    --purple: #b388ff;
+    --blue-dim: rgba(68, 138, 255, 0.10);
+    --purple: #a86fdf;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'Outfit', -apple-system, sans-serif;
-    background: var(--bg-void);
+    font-family: 'Source Sans 3', -apple-system, sans-serif;
+    background: var(--void);
     color: var(--text-primary);
     height: 100vh;
     display: flex;
@@ -144,9 +171,9 @@
   .ac {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 6px;
+    border-radius: var(--radius-card);
+    padding: var(--padding-card);
+    margin-bottom: 8px;
     transition: border-color 0.2s, background 0.2s;
   }
 
@@ -989,6 +1016,49 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* ═══════════ GATE STATUS ═══════════ */
+  .ac-gates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--grid, 8px);
+    margin-top: 8px;
+  }
+
+  .gate-dot {
+    font-family: var(--font-system, 'Inter', sans-serif);
+    font-size: var(--font-size-system, 11px);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.2);
+    cursor: default;
+  }
+
+  .gate-dot.pass { color: var(--trinity-approve, #32D74B); }
+  .gate-dot.fail { color: var(--trinity-deny, #FF453A); }
+
+  .ac-last-event {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: var(--font-size-mono, 12px);
+    color: var(--text-secondary, #7a8a9e);
+    margin-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ac-model-pill {
+    background: var(--domain-evolution-neon, rgba(168, 111, 223, 0.15));
+    color: var(--text-primary, #F2F2F7);
+    border-radius: var(--radius-pill, 9999px);
+    padding: 2px 10px;
+    font-family: var(--font-system, 'Inter', sans-serif);
+    font-size: var(--font-size-system, 11px);
+    text-transform: uppercase;
+    margin-left: auto;
   }
 
   /* ─── Stalled / Blocked card borders ─── */
@@ -1919,6 +1989,126 @@
     /* ═══ Mobile Settings gear ═══ */
     #mobileSettings { display: inline-block !important; }
   }
+
+  /* ═══════════ GATES DASHBOARD ═══════════ */
+  .gates-dashboard {
+    padding: 20px;
+    overflow-y: auto;
+    height: 100%;
+  }
+
+  .gates-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .gates-refresh {
+    background: var(--container-high, #1B1B1B);
+    border: 1px solid var(--border, #1B1B1B);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-family: var(--font-system);
+    font-size: var(--font-size-system);
+    cursor: pointer;
+  }
+
+  .gates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .gate-card {
+    background: var(--container-low, #131313);
+    border-radius: var(--radius-card, 14px);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gate-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle at top left, var(--domain-evolution-glow), transparent);
+    pointer-events: none;
+  }
+  .gate-card.gate-pass::before {
+    background: radial-gradient(circle at top left, rgba(50, 215, 75, 0.08), transparent);
+  }
+  .gate-card.gate-fail::before {
+    background: radial-gradient(circle at top left, rgba(255, 69, 58, 0.08), transparent);
+  }
+
+  .gate-card-title {
+    font-family: var(--font-system);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+
+  .gate-tool-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+
+  .gate-tool-name {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-mono);
+    color: var(--text-secondary);
+  }
+
+  .gate-tool-status {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-mono);
+  }
+
+  .gate-tool-status.pass { color: var(--trinity-approve); }
+  .gate-tool-status.fail { color: var(--trinity-deny); }
+  .gate-tool-status.pending { color: var(--text-faint, rgba(242,242,247,0.3)); }
+
+  /* ═══════════ DRAG-DROP FILE UPLOAD ═══════════ */
+  .drag-active {
+    outline: 2px dashed var(--domain-evolution, #a86fdf) !important;
+    background: var(--domain-evolution-neon, rgba(168, 111, 223, 0.15)) !important;
+    border-radius: var(--radius-card, 14px);
+  }
+
+  .file-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--container-high, #1B1B1B);
+    border-radius: var(--radius-pill, 9999px);
+    padding: 4px 12px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-mono);
+    color: var(--text-secondary);
+  }
+
+  /* ═══════════ GATES PANEL ═══════════ */
+  .gates-panel {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--void);
+    z-index: 10;
+    overflow-y: auto;
+  }
+
+  .gates-panel.mobile-active {
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -1980,6 +2170,16 @@
     </div>
     <div id="fileTree" class="fp-tree"></div>
   </aside>
+
+  <div class="gates-panel" id="gatesPanel">
+    <div class="gates-dashboard" id="gatesDashboard">
+      <div class="gates-header">
+        <h2 style="font-family:var(--font-system);font-size:14px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin:0">Gate Status</h2>
+        <button class="gates-refresh" onclick="loadGatesDashboard()">Refresh</button>
+      </div>
+      <div class="gates-grid" id="gatesGrid"></div>
+    </div>
+  </div>
 </div>
 
 <!-- Mobile Tab Bar -->
@@ -1995,6 +2195,10 @@
   <button class="tab" data-tab="files">
     <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
     <span class="tab-label">Files</span>
+  </button>
+  <button class="tab" data-tab="gates">
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+    <span class="tab-label">Gates</span>
   </button>
 </nav>
 
@@ -2097,6 +2301,7 @@
         <option value="sonnet">Sonnet 4.6</option>
         <option value="haiku">Haiku 4.5</option>
       </select>
+      <div id="modelHint" style="display:none;font-family:var(--font-mono);font-size:11px;color:var(--domain-evolution);margin-top:4px"></div>
     </div>
 
     <!-- Skip Permissions -->
@@ -2230,6 +2435,7 @@ function renderAvatarCircle(agent, size) {
 let ws = null;
 let agentData = {};
 let agentRoster = [];
+const agentHookEvents = {};  // { agentName: { tool: { exit_code, summary, timestamp } } }
 
 const $ = id => document.getElementById(id);
 const $msgs = $('messages'), $input = $('msgInput'), $send = $('sendBtn');
@@ -2282,6 +2488,11 @@ function connect() {
       agentRoster = agentRoster.filter(x => x.name !== d.agent);
       delete agentData[d.agent];
       renderAgents();
+    }
+    else if (d.type === 'hook_event') {
+      if (!agentHookEvents[d.agent]) agentHookEvents[d.agent] = {};
+      agentHookEvents[d.agent][d.tool] = { exit_code: d.exit_code, summary: d.summary, timestamp: d.timestamp };
+      updateAgentGateStatus(d.agent);
     }
   };
 }
@@ -2583,6 +2794,7 @@ function renderAgents() {
         ${stBadge}
       </div>
       ${actLine}${progressHtml}${blockerHtml}${stalledHtml}${deadHtml}${commitHtml}
+      <div class="ac-gates"></div>
     `;
 
     // Card-level avatar (mobile)
@@ -2749,6 +2961,11 @@ function renderAgents() {
     });
 
     $agents.appendChild(card);
+
+    // Restore gate status from tracked events
+    if (agentHookEvents[a.name]) {
+      setTimeout(() => updateAgentGateStatus(a.name), 0);
+    }
   });
 
   // ── DE-BOARDED SECTION ──
@@ -2837,6 +3054,178 @@ function renderAgents() {
     $target.appendChild(opt);
   });
   $target.value = cur || 'all';
+}
+
+// ═══════════ Agent Gate Status ═══════════
+function updateAgentGateStatus(agentName) {
+  const card = document.querySelector(`.ac[data-agent-name="${agentName}"]`);
+  if (!card) return;
+
+  const events = agentHookEvents[agentName] || {};
+
+  // Update gate dots
+  let gatesEl = card.querySelector('.ac-gates');
+  if (!gatesEl) {
+    gatesEl = document.createElement('div');
+    gatesEl.className = 'ac-gates';
+    card.appendChild(gatesEl);
+  }
+
+  gatesEl.innerHTML = '';
+  for (const [tool, ev] of Object.entries(events)) {
+    if (!tool) continue;
+    const dot = document.createElement('span');
+    dot.className = 'gate-dot ' + (ev.exit_code === 0 ? 'pass' : 'fail');
+    dot.textContent = '\u25CF ' + tool;
+    dot.title = ev.summary || '';
+    gatesEl.appendChild(dot);
+  }
+
+  // Update last event
+  let lastEl = card.querySelector('.ac-last-event');
+  const allEvents = Object.values(events);
+  if (allEvents.length > 0) {
+    const latest = allEvents[allEvents.length - 1];
+    if (!lastEl) {
+      lastEl = document.createElement('div');
+      lastEl.className = 'ac-last-event';
+      card.appendChild(lastEl);
+    }
+    lastEl.textContent = 'Last: ' + (latest.summary || '') + ' \u00B7 just now';
+  }
+}
+
+// ═══════════ Load Historical Hook Events on Init ═══════════
+async function loadHistoricalHookEvents() {
+  try {
+    for (const agent of agentRoster) {
+      const res = await fetch(`/api/agents/${agent.name}/hook-events?limit=50`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!agentHookEvents[agent.name]) agentHookEvents[agent.name] = {};
+      // Events are newest-first; process oldest-first so latest wins
+      for (const ev of (data.events || []).reverse()) {
+        if (ev.tool) {
+          agentHookEvents[agent.name][ev.tool] = {
+            exit_code: ev.exit_code,
+            summary: ev.summary,
+            timestamp: ev.timestamp
+          };
+        }
+      }
+      updateAgentGateStatus(agent.name);
+    }
+  } catch (e) {
+    console.warn('Failed to load historical hook events:', e);
+  }
+}
+
+// ═══════════ Gates Dashboard ═══════════
+async function loadGatesDashboard() {
+  const grid = document.getElementById('gatesGrid');
+  if (!grid) return;
+
+  try {
+    const res = await fetch('/api/hooks/events/all?limit=200');
+    const data = await res.json();
+    const events = data.events || [];
+
+    // Group by tool, get latest status per tool
+    const toolStatus = {};
+    events.forEach(ev => {
+      if (!ev.tool) return;
+      const key = ev.tool;
+      if (!toolStatus[key] || ev.timestamp > toolStatus[key].timestamp) {
+        toolStatus[key] = ev;
+      }
+    });
+
+    // Build gate cards grouped by gate naming convention
+    const gates = {
+      'Gate 1: Deterministic': ['pytest', 'flake8', 'mypy', 'bandit', 'pip-audit', 'coverage', 'secret-scan'],
+      'Gate 2: Integration': ['flyctl-deploy', 'health-poll', 'sentry-check'],
+      'Gate 3: AI Review': ['greptile', 'coderabbit-cli', 'claude-review'],
+    };
+
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+    for (const [gateName, tools] of Object.entries(gates)) {
+      const card = document.createElement('div');
+      // Determine overall gate status for glow color
+      const toolStatuses = tools.map(t => toolStatus[t]);
+      const anyFail = toolStatuses.some(s => s && s.exit_code !== 0);
+      const allRun = toolStatuses.every(s => s);
+      const gateState = anyFail ? 'gate-fail' : (allRun ? 'gate-pass' : '');
+      card.className = 'gate-card ' + gateState;
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'gate-card-title';
+      titleEl.textContent = gateName;
+      card.appendChild(titleEl);
+
+      tools.forEach(tool => {
+        const ev = toolStatus[tool];
+        let statusClass = 'pending';
+        let statusText = '\u2014';
+        if (ev) {
+          statusClass = ev.exit_code === 0 ? 'pass' : 'fail';
+          statusText = ev.exit_code === 0 ? 'PASS' : 'FAIL';
+        }
+        const row = document.createElement('div');
+        row.className = 'gate-tool-row';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'gate-tool-name';
+        nameSpan.textContent = tool;
+        const statusSpan = document.createElement('span');
+        statusSpan.className = 'gate-tool-status ' + statusClass;
+        statusSpan.textContent = statusText;
+        row.appendChild(nameSpan);
+        row.appendChild(statusSpan);
+        card.appendChild(row);
+      });
+
+      grid.appendChild(card);
+    }
+  } catch (err) {
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+    const errDiv = document.createElement('div');
+    errDiv.style.color = 'var(--text-secondary)';
+    errDiv.textContent = 'Failed to load gate data';
+    grid.appendChild(errDiv);
+  }
+}
+
+// ═══════════ Roles Registry (model hints) ═══════════
+let rolesRegistry = null;
+
+async function loadRolesRegistry() {
+  if (rolesRegistry) return rolesRegistry;
+  try {
+    const res = await fetch('/api/registries/roles');
+    rolesRegistry = await res.json();
+    return rolesRegistry;
+  } catch (e) { return {}; }
+}
+
+async function onRoleChange(roleType) {
+  const roles = await loadRolesRegistry();
+  const role = roles[roleType];
+  const hintEl = document.getElementById('modelHint');
+  const modelSelect = document.getElementById('dModel');
+
+  if (role && role.model_hint_label) {
+    if (hintEl) {
+      hintEl.textContent = role.model_hint_label;
+      hintEl.style.display = 'block';
+    }
+    if (modelSelect && role.model_hint) {
+      modelSelect.value = role.model_hint;
+    }
+  } else {
+    if (hintEl) hintEl.style.display = 'none';
+    if (role && role.model_hint && modelSelect) {
+      modelSelect.value = role.model_hint;
+    }
+  }
 }
 
 // ═══════════ Send ═══════════
@@ -3074,6 +3463,8 @@ $dRoleType.onchange = () => {
     $dRole.value = '';
     $dPrompt.value = '';
   }
+  // Model hint from role registry
+  onRoleChange(rt);
 };
 
 // ─── Name auto-format ───
@@ -3467,10 +3858,12 @@ function switchTab(tab) {
   const sidebar = document.querySelector('.sidebar');
   const chat = document.querySelector('.chat');
   const filePanel = document.querySelector('.file-panel');
+  const gatesPanel = document.getElementById('gatesPanel');
 
   sidebar.classList.remove('mobile-active');
   chat.classList.remove('mobile-hidden');
   filePanel.classList.remove('mobile-active');
+  if (gatesPanel) gatesPanel.classList.remove('mobile-active');
 
   if (tab === 'agents') {
     sidebar.classList.add('mobile-active');
@@ -3478,6 +3871,10 @@ function switchTab(tab) {
   } else if (tab === 'files') {
     filePanel.classList.add('mobile-active');
     chat.classList.add('mobile-hidden');
+  } else if (tab === 'gates') {
+    if (gatesPanel) gatesPanel.classList.add('mobile-active');
+    chat.classList.add('mobile-hidden');
+    loadGatesDashboard();
   }
 }
 
@@ -3566,7 +3963,7 @@ if ($attachBtn) {
           const fd = new FormData();
           fd.append('file', f);
           try {
-            const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+            const resp = await fetch('/api/files/upload', { method: 'POST', body: fd });
             const data = await resp.json();
             if (data.path) {
               // Show attachment chip instead of inline text
@@ -3653,6 +4050,8 @@ fetch('/api/agents').then(r => r.json()).then(agents => {
     } catch(e) {}
   }
   renderAgents();
+  // Fetch historical hook events so agent cards show gate status on load
+  loadHistoricalHookEvents();
 }).catch(() => {});
 connect();
 
@@ -3664,6 +4063,66 @@ document.addEventListener('visibilitychange', () => {
 });
 
 initFileTree();
+
+// ═══════════ Drag-and-Drop File Upload ═══════════
+(function initDragDrop() {
+  const composeArea = document.getElementById('msgInput');
+  if (!composeArea) return;
+
+  composeArea.addEventListener('dragover', (e) => {
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      composeArea.classList.add('drag-active');
+    }
+  });
+
+  composeArea.addEventListener('dragleave', () => {
+    composeArea.classList.remove('drag-active');
+  });
+
+  composeArea.addEventListener('drop', async (e) => {
+    if (!e.dataTransfer.files.length) return;
+    e.preventDefault();
+    composeArea.classList.remove('drag-active');
+
+    for (const file of e.dataTransfer.files) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/files/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.filename) {
+          addFilePill(data.filename, file.type);
+        }
+      } catch (err) {
+        console.error('Upload failed:', err);
+      }
+    }
+  });
+})();
+
+function addFilePill(filename, mimeType) {
+  let container = document.getElementById('filePills');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'filePills';
+    container.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;';
+    const composeParent = document.getElementById('msgInput').parentElement;
+    composeParent.insertBefore(container, composeParent.firstChild);
+  }
+
+  const pill = document.createElement('span');
+  pill.className = 'file-pill';
+  const icon = mimeType && mimeType.startsWith('image/') ? '\uD83D\uDDBC' : '\uD83D\uDCC4';
+  const removeSpan = document.createElement('span');
+  removeSpan.style.cssText = 'cursor:pointer;margin-left:4px';
+  removeSpan.textContent = '\u00D7';
+  removeSpan.onclick = function() { this.parentElement.remove(); };
+  pill.textContent = icon + ' ' + filename + ' ';
+  pill.appendChild(removeSpan);
+  container.appendChild(pill);
+}
 </script>
 </body>
 </html>

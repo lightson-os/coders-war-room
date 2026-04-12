@@ -11,6 +11,7 @@
 # Exit 0 = allow tool call to proceed
 # JSON stdout with additionalContext = Claude sees the messages
 set -euo pipefail
+trap 'echo "Hook crashed: $0" >&2; exit 2' ERR
 
 INBOX_DIR="/Users/gurvindersingh/coders-war-room/.inbox"
 AGENT_NAME="${CLAUDE_AGENT_NAME:-default}"

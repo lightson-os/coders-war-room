@@ -1,5 +1,8 @@
 import asyncio
+import hashlib
 import json
+import logging
+import os
 import re
 import subprocess
 import time
@@ -15,6 +18,9 @@ from fastapi import FastAPI, UploadFile, File as FastAPIFile, WebSocket, WebSock
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
+from settings_generator import write_settings
+
+log = logging.getLogger("warroom")
 
 # ---------------------------------------------------------------------------
 # Config
@@ -184,6 +190,7 @@ def refresh_last_commits():
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA busy_timeout=5000")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -222,6 +229,22 @@ async def init_db():
             await db.execute("ALTER TABLE agents ADD COLUMN icon TEXT")
         except Exception:
             pass
+        # Hook events table — stores hook callback data from agent sessions
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS hook_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                agent TEXT NOT NULL,
+                event_type TEXT NOT NULL,
+                tool TEXT DEFAULT '',
+                exit_code INTEGER DEFAULT 0,
+                summary TEXT DEFAULT '',
+                timestamp TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            )
+        """)
+        await db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_hook_events_agent
+            ON hook_events(agent, timestamp DESC)
+        """)
         await db.commit()
 
 
@@ -763,6 +786,34 @@ async def broadcast_ws(data: dict, exclude: Optional[WebSocket] = None):
                 connected_clients.remove(client)
 
 
+def validate_registry_sync() -> bool:
+    """Check if registries have changed since last skill generation."""
+    registry_dir = os.path.join(os.path.dirname(__file__), "registries")
+    gen_file = os.path.join(registry_dir, ".last-generated.json")
+
+    if not os.path.exists(gen_file):
+        print("[REGISTRY] No .last-generated.json found — skill generation has never been run")
+        return False
+
+    with open(gen_file) as f:
+        last_hashes = json.load(f)
+
+    for reg_name in ["gate-registry", "role-registry", "hook-registry", "tool-budget-registry"]:
+        reg_path = os.path.join(registry_dir, f"{reg_name}.yaml")
+        if not os.path.exists(reg_path):
+            log.warning(f"[REGISTRY DRIFT] {reg_name}.yaml is missing")
+            return False
+        with open(reg_path, "rb") as f:
+            current_hash = hashlib.sha256(f.read()).hexdigest()
+        if current_hash != last_hashes.get(reg_name):
+            print(
+                f"[REGISTRY DRIFT] {reg_name}.yaml changed. "
+                "Run: python skill-engine/generate.py --all"
+            )
+            return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
@@ -784,6 +835,8 @@ async def lifespan(app: FastAPI):
                 "skip_permissions": True,
             }
     refresh_last_commits()
+    if not validate_registry_sync():
+        print("[REGISTRY DRIFT] Registries updated since last skill generation")
     task1 = asyncio.create_task(flush_queues_loop())
     task2 = asyncio.create_task(agent_status_loop())
     task3 = asyncio.create_task(auto_reconcile_loop())
@@ -1189,31 +1242,85 @@ async def recover_agent(agent_name: str):
     skip_perms = config.get("skip_permissions", True)
 
     try:
-        subprocess.run([TMUX_BIN, "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "-c", agent_dir], check=True, capture_output=True, timeout=5)
-        subprocess.run([TMUX_BIN, "set-option", "-t", session, "mouse", "on"], capture_output=True, timeout=2)
-        subprocess.run([TMUX_BIN, "set-option", "-t", session, "history-limit", "10000"], capture_output=True, timeout=2)
-        subprocess.run([TMUX_BIN, "rename-window", "-t", session, agent_name], capture_output=True, timeout=2)
-        subprocess.run([TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_AGENT_NAME={agent_name}", "Enter"], capture_output=True, timeout=2)
+        tmux_run = subprocess.run
+        tmux_run(
+            [TMUX_BIN, "new-session", "-d", "-s", session,
+             "-x", "200", "-y", "50", "-c", agent_dir],
+            check=True, capture_output=True, timeout=5,
+        )
+        tmux_run(
+            [TMUX_BIN, "set-option", "-t", session, "mouse", "on"],
+            capture_output=True, timeout=2,
+        )
+        tmux_run(
+            [TMUX_BIN, "set-option", "-t", session,
+             "history-limit", "10000"],
+            capture_output=True, timeout=2,
+        )
+        tmux_run(
+            [TMUX_BIN, "rename-window", "-t", session, agent_name],
+            capture_output=True, timeout=2,
+        )
+        tmux_run(
+            [TMUX_BIN, "send-keys", "-t", session,
+             f"export WARROOM_AGENT_NAME={agent_name}", "Enter"],
+            capture_output=True, timeout=2,
+        )
+
+        # Set WARROOM_ROLE_TYPE for SessionStart hook
+        role_type = config.get("role_type", agent_name)
+        tmux_run(
+            [TMUX_BIN, "send-keys", "-t", session,
+             f"export WARROOM_ROLE_TYPE='{role_type}'", "Enter"],
+            capture_output=True, timeout=2,
+        )
+
+        # Generate role-specific settings (hooks, permissions)
+        if role_type:
+            try:
+                path = write_settings(role_type, agent_dir)
+                log.info("Generated settings for recovered "
+                         f"{agent_name}: {path}")
+            except Exception as e:
+                log.warning("Failed to generate settings for "
+                            f"recovered {agent_name}: {e}")
+
         await asyncio.sleep(0.5)
 
         model_flag = f"--model {model}" if model != "opus" else ""
-        perms_flag = "--dangerously-skip-permissions" if skip_perms else ""
-        cmd = f"cd {agent_dir} && claude {model_flag} {perms_flag}".strip()
-        cmd = " ".join(cmd.split())
-        subprocess.run([TMUX_BIN, "send-keys", "-t", session, cmd, "Enter"], capture_output=True, timeout=2)
+        perms_flag = (
+            "--dangerously-skip-permissions" if skip_perms else ""
+        )
+        cmd = f"cd {agent_dir} && claude {model_flag} {perms_flag}"
+        cmd = " ".join(cmd.strip().split())
+        tmux_run(
+            [TMUX_BIN, "send-keys", "-t", session, cmd, "Enter"],
+            capture_output=True, timeout=2,
+        )
 
         for _ in range(15):
             await asyncio.sleep(2)
             if check_agent_ready(session):
                 break
 
-        injection = f"Read ~/coders-war-room/startup.md — you are {agent_name}, session recovered. Acknowledge with your name and role, then wait for instructions."
+        injection = (
+            "Read ~/coders-war-room/startup.md — "
+            f"you are {agent_name}, session recovered. "
+            "Acknowledge with your name and role, "
+            "then wait for instructions."
+        )
         send_to_tmux(session, injection)
 
-        saved = await save_message("system", "all", f"{agent_name} session recovered (context lost — fresh start)", "system")
+        msg = (f"{agent_name} session recovered "
+               "(context lost — fresh start)")
+        saved = await save_message("system", "all", msg, "system")
         await broadcast_ws({"type": "message", "message": saved})
 
-        return {"status": "recovered", "agent": agent_name, "warning": "Conversation context was lost — agent starts fresh"}
+        return {
+            "status": "recovered",
+            "agent": agent_name,
+            "warning": "Context was lost — agent starts fresh",
+        }
     except subprocess.CalledProcessError as e:
         subprocess.run([TMUX_BIN, "kill-session", "-t", session], capture_output=True)
         return JSONResponse({"error": f"Recovery failed: {e}"}, status_code=500)
@@ -1252,6 +1359,16 @@ async def agent_reboard(agent_name: str):
 
 @app.post("/api/agents/create")
 async def create_agent(req: AgentCreate):
+    # Check registry-skill sync before creating agent
+    if not validate_registry_sync():
+        log.warning("[REGISTRY DRIFT] Creating agent "
+                    "with potentially outdated settings")
+        drift_msg = (
+            "[SYSTEM] Registry-skill drift detected. "
+            "Run: python skill-engine/generate.py --all"
+        )
+        await save_message("system", None, drift_msg, "system")
+
     # Validate name format
     if not NAME_PATTERN.match(req.name):
         return JSONResponse(
@@ -1316,7 +1433,24 @@ async def create_agent(req: AgentCreate):
             capture_output=True,
             timeout=2,
         )
+
+        # Set WARROOM_ROLE_TYPE for session-start.sh skill invocation
+        role_type = req.role_type or req.name
+        subprocess.run(
+            [TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_ROLE_TYPE='{role_type}'", "Enter"],
+            capture_output=True,
+            timeout=2,
+        )
         await asyncio.sleep(0.5)
+
+        # Generate role-specific .claude/settings.local.json
+        role_type = req.role_type or req.name
+        if role_type:
+            try:
+                settings_path = write_settings(role_type, agent_dir)
+                print(f"[SETTINGS] Generated settings for {req.name}: {settings_path}")
+            except Exception as e:
+                print(f"[SETTINGS] Failed to generate settings for {req.name}: {e}")
 
         # Start Claude Code
         model_flag = f"--model {req.model}" if req.model != "opus" else ""
@@ -1612,6 +1746,89 @@ async def serve_icon(size: str):
         from fastapi.responses import Response
         return Response(content=icon_path.read_bytes(), media_type="image/png")
     return PlainTextResponse("Not found", status_code=404)
+
+
+class HookEventCreate(BaseModel):
+    agent: str
+    event_type: str
+    tool: str = ""
+    exit_code: int = 0
+    summary: str = ""
+
+
+@app.post("/api/hooks/event")
+async def receive_hook_event(event: HookEventCreate):
+    """Receive hook callback data from agent hook scripts."""
+    summary = event.summary[:2000] if event.summary else ""
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("PRAGMA busy_timeout=5000")
+        await db.execute(
+            "INSERT INTO hook_events "
+            "(agent, event_type, tool, exit_code, summary) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (event.agent, event.event_type,
+             event.tool, event.exit_code, summary),
+        )
+        await db.commit()
+
+    # Broadcast to WebSocket clients
+    ws_event = {
+        "type": "hook_event",
+        "agent": event.agent,
+        "event_type": event.event_type,
+        "tool": event.tool,
+        "exit_code": event.exit_code,
+        "summary": summary,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    for ws in list(connected_clients):
+        try:
+            await ws.send_text(json.dumps(ws_event))
+        except Exception:
+            if ws in connected_clients:
+                connected_clients.remove(ws)
+
+    return {"status": "ok"}
+
+
+@app.get("/api/agents/{name}/hook-events")
+async def get_agent_hook_events(name: str, limit: int = 50):
+    """Return recent hook events for an agent."""
+    limit = min(limit, 500)
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM hook_events WHERE agent = ? ORDER BY timestamp DESC LIMIT ?",
+            (name, limit),
+        )
+        rows = await cursor.fetchall()
+    return {"events": [dict(r) for r in rows]}
+
+
+@app.get("/api/hooks/events/all")
+async def get_all_hook_events(limit: int = 200):
+    """Return recent hook events across all agents for Gates dashboard."""
+    limit = min(limit, 500)
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT * FROM hook_events ORDER BY timestamp DESC LIMIT ?",
+            (limit,),
+        )
+        rows = await cursor.fetchall()
+    return {"events": [dict(r) for r in rows]}
+
+
+@app.get("/api/registries/roles")
+async def get_roles_registry():
+    """Return role registry for UI — role dropdown, model hints."""
+    reg_path = os.path.join(os.path.dirname(__file__), "registries", "role-registry.yaml")
+    if not os.path.exists(reg_path):
+        return {}
+    with open(reg_path) as f:
+        data = yaml.safe_load(f)
+    return data.get("roles", {})
 
 
 @app.websocket("/ws")
