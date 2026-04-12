@@ -32,7 +32,6 @@ def resolve_hook_templates(template_names: list[str], hook_reg: dict) -> dict:
             if event_name not in merged:
                 merged[event_name] = []
             for hook in hook_list:
-                entry = {"hooks": [{}]}
                 hook_def = {}
                 hook_def["type"] = hook.get("type", "command")
                 # Resolve command path to absolute

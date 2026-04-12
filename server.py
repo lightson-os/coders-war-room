@@ -187,6 +187,7 @@ def refresh_last_commits():
 async def init_db():
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA busy_timeout=5000")
         await db.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -797,7 +798,8 @@ def validate_registry_sync() -> bool:
     for reg_name in ["gate-registry", "role-registry", "hook-registry", "tool-budget-registry"]:
         reg_path = os.path.join(registry_dir, f"{reg_name}.yaml")
         if not os.path.exists(reg_path):
-            continue
+            log.warning(f"[REGISTRY DRIFT] {reg_name}.yaml is missing")
+            return False
         with open(reg_path, "rb") as f:
             current_hash = hashlib.sha256(f.read()).hexdigest()
         if current_hash != last_hashes.get(reg_name):
@@ -1239,6 +1241,19 @@ async def recover_agent(agent_name: str):
         subprocess.run([TMUX_BIN, "set-option", "-t", session, "history-limit", "10000"], capture_output=True, timeout=2)
         subprocess.run([TMUX_BIN, "rename-window", "-t", session, agent_name], capture_output=True, timeout=2)
         subprocess.run([TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_AGENT_NAME={agent_name}", "Enter"], capture_output=True, timeout=2)
+
+        # Set WARROOM_ROLE_TYPE for SessionStart hook skill invocation
+        role_type = config.get("role_type", agent_name)
+        subprocess.run([TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_ROLE_TYPE='{role_type}'", "Enter"], capture_output=True, timeout=2)
+
+        # Generate role-specific settings (hooks, permissions)
+        if role_type:
+            try:
+                settings_path = write_settings(role_type, agent_dir)
+                log.info(f"Generated settings for recovered {agent_name}: {settings_path}")
+            except Exception as e:
+                log.warning(f"Failed to generate settings for recovered {agent_name}: {e}")
+
         await asyncio.sleep(0.5)
 
         model_flag = f"--model {model}" if model != "opus" else ""
@@ -1297,6 +1312,13 @@ async def agent_reboard(agent_name: str):
 
 @app.post("/api/agents/create")
 async def create_agent(req: AgentCreate):
+    # Check registry-skill sync before creating agent
+    if not validate_registry_sync():
+        log.warning("[REGISTRY DRIFT] Creating agent with potentially outdated settings")
+        await save_message("system", None,
+            "[SYSTEM] Registry-skill drift detected. Skills may reference outdated gate/tool assignments. Run: python skill-engine/generate.py --all",
+            "system")
+
     # Validate name format
     if not NAME_PATTERN.match(req.name):
         return JSONResponse(
@@ -1676,36 +1698,40 @@ async def serve_icon(size: str):
     return PlainTextResponse("Not found", status_code=404)
 
 
+class HookEventCreate(BaseModel):
+    agent: str
+    event_type: str
+    tool: str = ""
+    exit_code: int = 0
+    summary: str = ""
+
+
 @app.post("/api/hooks/event")
-async def receive_hook_event(request: Request):
+async def receive_hook_event(event: HookEventCreate):
     """Receive hook callback data from agent hook scripts."""
-    data = await request.json()
-    agent = data.get("agent", "unknown")
-    event_type = data.get("event_type", "unknown")
-    tool = data.get("tool", "")
-    exit_code = data.get("exit_code", 0)
-    summary = data.get("summary", "")
+    summary = event.summary[:2000] if event.summary else ""
 
     async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("PRAGMA busy_timeout=5000")
         await db.execute(
             "INSERT INTO hook_events (agent, event_type, tool, exit_code, summary) VALUES (?, ?, ?, ?, ?)",
-            (agent, event_type, tool, exit_code, summary),
+            (event.agent, event.event_type, event.tool, event.exit_code, summary),
         )
         await db.commit()
 
     # Broadcast to WebSocket clients
-    event = {
+    ws_event = {
         "type": "hook_event",
-        "agent": agent,
-        "event_type": event_type,
-        "tool": tool,
-        "exit_code": exit_code,
+        "agent": event.agent,
+        "event_type": event.event_type,
+        "tool": event.tool,
+        "exit_code": event.exit_code,
         "summary": summary,
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
     for ws in list(connected_clients):
         try:
-            await ws.send_text(json.dumps(event))
+            await ws.send_text(json.dumps(ws_event))
         except Exception:
             if ws in connected_clients:
                 connected_clients.remove(ws)
@@ -1716,6 +1742,7 @@ async def receive_hook_event(request: Request):
 @app.get("/api/agents/{name}/hook-events")
 async def get_agent_hook_events(name: str, limit: int = 50):
     """Return recent hook events for an agent."""
+    limit = min(limit, 500)
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(
@@ -1729,6 +1756,7 @@ async def get_agent_hook_events(name: str, limit: int = 50):
 @app.get("/api/hooks/events/all")
 async def get_all_hook_events(limit: int = 200):
     """Return recent hook events across all agents for Gates dashboard."""
+    limit = min(limit, 500)
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         cursor = await db.execute(

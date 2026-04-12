@@ -141,6 +141,7 @@ roles:
       - template: base-hooks
       - template: no-code-hooks
       - template: merge-block-gate
+    gates_accountable_for: []
 
   chronicler:
     display_name: "Chronicler"
@@ -164,6 +165,7 @@ roles:
     hooks:
       - template: base-hooks
       - template: no-code-hooks
+    gates_accountable_for: []
     monitors_budgets_for:
       - qodo
       - coderabbit-cli
