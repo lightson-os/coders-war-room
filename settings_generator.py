@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""settings_generator.py — Reads registries, produces .claude/settings.local.json for an agent role."""
+"""Reads registries, produces .claude/settings.local.json per role."""
 
 import json
 import os
@@ -25,7 +25,9 @@ def resolve_hook_templates(template_names: list[str], hook_reg: dict) -> dict:
         tname = tname_entry.get("template") if isinstance(tname_entry, dict) else tname_entry
         template = templates.get(tname)
         if not template:
-            print(f"WARNING: hook template '{tname}' not found in hook-registry.yaml", file=sys.stderr)
+            print(f"WARNING: hook template '{tname}' "
+                  "not found in hook-registry.yaml",
+                  file=sys.stderr)
             continue
 
         for event_name, hook_list in template.get("hooks", {}).items():

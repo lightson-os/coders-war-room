@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import re
 import subprocess
@@ -13,11 +14,13 @@ from typing import Optional
 
 import aiosqlite
 import yaml
-from fastapi import FastAPI, Request, UploadFile, File as FastAPIFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, UploadFile, File as FastAPIFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 from settings_generator import write_settings
+
+log = logging.getLogger("warroom")
 
 # ---------------------------------------------------------------------------
 # Config
@@ -803,7 +806,10 @@ def validate_registry_sync() -> bool:
         with open(reg_path, "rb") as f:
             current_hash = hashlib.sha256(f.read()).hexdigest()
         if current_hash != last_hashes.get(reg_name):
-            print(f"[REGISTRY DRIFT] {reg_name}.yaml changed since last skill generation. Run: python skill-engine/generate.py --all")
+            print(
+                f"[REGISTRY DRIFT] {reg_name}.yaml changed. "
+                "Run: python skill-engine/generate.py --all"
+            )
             return False
     return True
 
@@ -1236,44 +1242,85 @@ async def recover_agent(agent_name: str):
     skip_perms = config.get("skip_permissions", True)
 
     try:
-        subprocess.run([TMUX_BIN, "new-session", "-d", "-s", session, "-x", "200", "-y", "50", "-c", agent_dir], check=True, capture_output=True, timeout=5)
-        subprocess.run([TMUX_BIN, "set-option", "-t", session, "mouse", "on"], capture_output=True, timeout=2)
-        subprocess.run([TMUX_BIN, "set-option", "-t", session, "history-limit", "10000"], capture_output=True, timeout=2)
-        subprocess.run([TMUX_BIN, "rename-window", "-t", session, agent_name], capture_output=True, timeout=2)
-        subprocess.run([TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_AGENT_NAME={agent_name}", "Enter"], capture_output=True, timeout=2)
+        tmux_run = subprocess.run
+        tmux_run(
+            [TMUX_BIN, "new-session", "-d", "-s", session,
+             "-x", "200", "-y", "50", "-c", agent_dir],
+            check=True, capture_output=True, timeout=5,
+        )
+        tmux_run(
+            [TMUX_BIN, "set-option", "-t", session, "mouse", "on"],
+            capture_output=True, timeout=2,
+        )
+        tmux_run(
+            [TMUX_BIN, "set-option", "-t", session,
+             "history-limit", "10000"],
+            capture_output=True, timeout=2,
+        )
+        tmux_run(
+            [TMUX_BIN, "rename-window", "-t", session, agent_name],
+            capture_output=True, timeout=2,
+        )
+        tmux_run(
+            [TMUX_BIN, "send-keys", "-t", session,
+             f"export WARROOM_AGENT_NAME={agent_name}", "Enter"],
+            capture_output=True, timeout=2,
+        )
 
-        # Set WARROOM_ROLE_TYPE for SessionStart hook skill invocation
+        # Set WARROOM_ROLE_TYPE for SessionStart hook
         role_type = config.get("role_type", agent_name)
-        subprocess.run([TMUX_BIN, "send-keys", "-t", session, f"export WARROOM_ROLE_TYPE='{role_type}'", "Enter"], capture_output=True, timeout=2)
+        tmux_run(
+            [TMUX_BIN, "send-keys", "-t", session,
+             f"export WARROOM_ROLE_TYPE='{role_type}'", "Enter"],
+            capture_output=True, timeout=2,
+        )
 
         # Generate role-specific settings (hooks, permissions)
         if role_type:
             try:
-                settings_path = write_settings(role_type, agent_dir)
-                log.info(f"Generated settings for recovered {agent_name}: {settings_path}")
+                path = write_settings(role_type, agent_dir)
+                log.info("Generated settings for recovered "
+                         f"{agent_name}: {path}")
             except Exception as e:
-                log.warning(f"Failed to generate settings for recovered {agent_name}: {e}")
+                log.warning("Failed to generate settings for "
+                            f"recovered {agent_name}: {e}")
 
         await asyncio.sleep(0.5)
 
         model_flag = f"--model {model}" if model != "opus" else ""
-        perms_flag = "--dangerously-skip-permissions" if skip_perms else ""
-        cmd = f"cd {agent_dir} && claude {model_flag} {perms_flag}".strip()
-        cmd = " ".join(cmd.split())
-        subprocess.run([TMUX_BIN, "send-keys", "-t", session, cmd, "Enter"], capture_output=True, timeout=2)
+        perms_flag = (
+            "--dangerously-skip-permissions" if skip_perms else ""
+        )
+        cmd = f"cd {agent_dir} && claude {model_flag} {perms_flag}"
+        cmd = " ".join(cmd.strip().split())
+        tmux_run(
+            [TMUX_BIN, "send-keys", "-t", session, cmd, "Enter"],
+            capture_output=True, timeout=2,
+        )
 
         for _ in range(15):
             await asyncio.sleep(2)
             if check_agent_ready(session):
                 break
 
-        injection = f"Read ~/coders-war-room/startup.md — you are {agent_name}, session recovered. Acknowledge with your name and role, then wait for instructions."
+        injection = (
+            "Read ~/coders-war-room/startup.md — "
+            f"you are {agent_name}, session recovered. "
+            "Acknowledge with your name and role, "
+            "then wait for instructions."
+        )
         send_to_tmux(session, injection)
 
-        saved = await save_message("system", "all", f"{agent_name} session recovered (context lost — fresh start)", "system")
+        msg = (f"{agent_name} session recovered "
+               "(context lost — fresh start)")
+        saved = await save_message("system", "all", msg, "system")
         await broadcast_ws({"type": "message", "message": saved})
 
-        return {"status": "recovered", "agent": agent_name, "warning": "Conversation context was lost — agent starts fresh"}
+        return {
+            "status": "recovered",
+            "agent": agent_name,
+            "warning": "Context was lost — agent starts fresh",
+        }
     except subprocess.CalledProcessError as e:
         subprocess.run([TMUX_BIN, "kill-session", "-t", session], capture_output=True)
         return JSONResponse({"error": f"Recovery failed: {e}"}, status_code=500)
@@ -1314,10 +1361,13 @@ async def agent_reboard(agent_name: str):
 async def create_agent(req: AgentCreate):
     # Check registry-skill sync before creating agent
     if not validate_registry_sync():
-        log.warning("[REGISTRY DRIFT] Creating agent with potentially outdated settings")
-        await save_message("system", None,
-            "[SYSTEM] Registry-skill drift detected. Skills may reference outdated gate/tool assignments. Run: python skill-engine/generate.py --all",
-            "system")
+        log.warning("[REGISTRY DRIFT] Creating agent "
+                    "with potentially outdated settings")
+        drift_msg = (
+            "[SYSTEM] Registry-skill drift detected. "
+            "Run: python skill-engine/generate.py --all"
+        )
+        await save_message("system", None, drift_msg, "system")
 
     # Validate name format
     if not NAME_PATTERN.match(req.name):
@@ -1714,8 +1764,11 @@ async def receive_hook_event(event: HookEventCreate):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("PRAGMA busy_timeout=5000")
         await db.execute(
-            "INSERT INTO hook_events (agent, event_type, tool, exit_code, summary) VALUES (?, ?, ?, ?, ?)",
-            (event.agent, event.event_type, event.tool, event.exit_code, summary),
+            "INSERT INTO hook_events "
+            "(agent, event_type, tool, exit_code, summary) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (event.agent, event.event_type,
+             event.tool, event.exit_code, summary),
         )
         await db.commit()
 

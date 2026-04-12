@@ -9,6 +9,7 @@
 #
 # Also checks the file-based inbox for any other pending messages.
 set -euo pipefail
+trap 'echo "Hook crashed: $0" >&2; exit 2' ERR
 
 # Read the hook input from stdin
 INPUT=$(cat)

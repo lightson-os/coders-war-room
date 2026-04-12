@@ -5,6 +5,7 @@
 # This is called by the war room server as an alternative to tmux paste.
 # The hooks (PreToolUse, UserPromptSubmit, Stop) will pick up the message.
 set -euo pipefail
+trap 'echo "Hook crashed: $0" >&2; exit 2' ERR
 
 AGENT_NAME="${1:?Usage: deliver-to-inbox.sh <agent> <sender> <phase> <message> [priority]}"
 SENDER="${2:?Missing sender}"

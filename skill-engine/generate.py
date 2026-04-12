@@ -22,7 +22,10 @@ import yaml
 WARROOM_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REGISTRY_DIR = os.path.join(WARROOM_DIR, "registries")
 SKILLS_DIR = os.path.expanduser("~/contextualise/.claude/skills")
-BOUNDARY = "<!-- ═══ BELOW THIS LINE: Collaborative section — authored by human + Claude Code ═══ -->"
+BOUNDARY = (
+    "<!-- ═══ BELOW THIS LINE: Collaborative section "
+    "— authored by human + Claude Code ═══ -->"
+)
 AUTO_START = "<!-- AUTO-GENERATED from registries — do not hand-edit above the boundary line -->"
 
 
@@ -60,7 +63,8 @@ def generate_gate_table(role_name: str, gate_reg: dict, role: dict) -> str:
     ]
 
     for gate_id, gate in gate_reg.get("gates", {}).items():
-        # Match gate IDs: role-registry uses short form (gate-1), gate-registry uses full (gate-1-deterministic)
+        # Match gate IDs: role-registry uses short form (gate-1),
+        # gate-registry uses full (gate-1-deterministic)
         matched = False
         role_desc = ""
         for g in all_gates:
@@ -81,7 +85,11 @@ def generate_gate_table(role_name: str, gate_reg: dict, role: dict) -> str:
         tools_str = ", ".join(tool_names) if tool_names else "—"
         ceiling = gate.get("retry_ceiling", "—")
         signal = gate.get("failure_signal", "—")
-        lines.append(f"| {gate.get('name', gate_id)} | {role_desc} | {tools_str} | {ceiling} | `{signal}` |")
+        gname = gate.get('name', gate_id)
+        lines.append(
+            f"| {gname} | {role_desc} | {tools_str} "
+            f"| {ceiling} | `{signal}` |"
+        )
 
     lines.append("")
     return "\n".join(lines)
@@ -323,7 +331,7 @@ def main():
 
     if not args.diff:
         save_generation_hashes()
-        print(f"\nRegistry hashes saved to registries/.last-generated.json")
+        print("\nRegistry hashes saved to registries/.last-generated.json")
 
 
 if __name__ == "__main__":

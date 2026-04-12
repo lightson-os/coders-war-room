@@ -10,6 +10,7 @@
 # RECURSION GUARD: Only blocks once per batch of messages.
 # Uses a lockfile to prevent infinite stop loops.
 set -euo pipefail
+trap 'echo "Hook crashed: $0" >&2; exit 2' ERR
 
 INBOX_DIR="/Users/gurvindersingh/coders-war-room/.inbox"
 AGENT_NAME="${CLAUDE_AGENT_NAME:-default}"
