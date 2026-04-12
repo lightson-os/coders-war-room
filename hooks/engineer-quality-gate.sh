@@ -23,12 +23,15 @@ if [ -f "venv/bin/activate" ]; then
   source venv/bin/activate
 fi
 
-# Timeout from registry via settings generator env var (default 110s)
-GATE_TIMEOUT="${WARROOM_PYTEST_TIMEOUT:-110}"
+# Timeout from registry via settings generator env var (default 120s)
+GATE_TIMEOUT="${WARROOM_PYTEST_TIMEOUT:-120}"
 
 # Run pytest with registry-driven timeout
-OUTPUT=$(timeout "$GATE_TIMEOUT" python -m pytest tests/ -q --tb=line 2>&1) || true
-EXIT_CODE=${PIPESTATUS[0]:-$?}
+# Temporarily disable errexit so non-zero exit doesn't trigger ERR trap
+set +e
+OUTPUT=$(timeout "$GATE_TIMEOUT" python -m pytest tests/ -q --tb=line 2>&1)
+EXIT_CODE=$?
+set -e
 
 # Handle timeout signal (exit code 124 from GNU timeout)
 if [ "$EXIT_CODE" -eq 124 ]; then

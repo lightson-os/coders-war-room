@@ -1,11 +1,16 @@
 #!/bin/bash
-# scripts/verify-qa-before-merge.sh
+# hooks/verify-qa-before-merge.sh
 # Claude Code PreToolUse hook — blocks git merge/push to main without QA PASS
 # Receives tool input JSON on stdin from Claude Code
 #
 # Returns:
 #   exit 0 = allow the tool call
-#   exit 1 = block the tool call (message on stderr shown to agent)
+#   exit 2 = block the tool call (message on stderr shown to agent)
+set -euo pipefail
+trap 'echo "Hook crashed: $0" >&2; exit 2' ERR
+
+AGENT_NAME="${WARROOM_AGENT_NAME:-git-agent}"
+WARROOM_URL="${WARROOM_URL:-http://localhost:5680}"
 
 INPUT=$(cat 2>/dev/null || echo "{}")
 
@@ -39,28 +44,37 @@ QA_REPORT="${REPO_ROOT}/docs/qa/${STORY_ID}_review.md"
 
 if [ ! -f "$QA_REPORT" ]; then
     echo "" >&2
-    echo "╔══════════════════════════════════════════╗" >&2
-    echo "║  MERGE BLOCKED — No QA report found      ║" >&2
-    echo "╠══════════════════════════════════════════╣" >&2
-    echo "║  Story: ${STORY_ID}" >&2
-    echo "║  Expected: docs/qa/${STORY_ID}_review.md" >&2
-    echo "║  Action: Run QA pipeline first           ║" >&2
-    echo "╚══════════════════════════════════════════╝" >&2
-    exit 1
+    echo "MERGE BLOCKED — No QA report found for ${STORY_ID}" >&2
+    echo "Expected: docs/qa/${STORY_ID}_review.md" >&2
+    echo "Action: Run QA pipeline first" >&2
+
+    curl -sf -X POST "${WARROOM_URL}/api/hooks/event" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\": \"${AGENT_NAME}\", \"event_type\": \"merge_blocked\", \"tool\": \"qa-report\", \"exit_code\": 1, \"summary\": \"No QA report for ${STORY_ID}\"}" \
+      2>/dev/null || true
+
+    exit 2
 fi
 
 if ! grep -q "VERDICT: PASS" "$QA_REPORT"; then
     VERDICT=$(grep "VERDICT:" "$QA_REPORT" | head -1 | sed 's/.*VERDICT: //' | tr -d '\n' || echo "unknown")
     echo "" >&2
-    echo "╔══════════════════════════════════════════╗" >&2
-    echo "║  MERGE BLOCKED — QA verdict is not PASS  ║" >&2
-    echo "╠══════════════════════════════════════════╣" >&2
-    echo "║  Story: ${STORY_ID}" >&2
-    echo "║  Verdict: ${VERDICT}" >&2
-    echo "║  Report: docs/qa/${STORY_ID}_review.md" >&2
-    echo "╚══════════════════════════════════════════╝" >&2
-    exit 1
+    echo "MERGE BLOCKED — QA verdict is not PASS for ${STORY_ID}" >&2
+    echo "Verdict: ${VERDICT}" >&2
+    echo "Report: docs/qa/${STORY_ID}_review.md" >&2
+
+    curl -sf -X POST "${WARROOM_URL}/api/hooks/event" \
+      -H "Content-Type: application/json" \
+      -d "{\"agent\": \"${AGENT_NAME}\", \"event_type\": \"merge_blocked\", \"tool\": \"qa-report\", \"exit_code\": 1, \"summary\": \"QA verdict ${VERDICT} for ${STORY_ID}\"}" \
+      2>/dev/null || true
+
+    exit 2
 fi
 
-echo "✓ QA PASS verified for ${STORY_ID} — merge allowed" >&2
+curl -sf -X POST "${WARROOM_URL}/api/hooks/event" \
+  -H "Content-Type: application/json" \
+  -d "{\"agent\": \"${AGENT_NAME}\", \"event_type\": \"merge_allowed\", \"tool\": \"qa-report\", \"exit_code\": 0, \"summary\": \"QA PASS verified for ${STORY_ID}\"}" \
+  2>/dev/null || true
+
+echo "QA PASS verified for ${STORY_ID} — merge allowed" >&2
 exit 0

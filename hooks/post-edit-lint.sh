@@ -2,6 +2,7 @@
 # hooks/post-edit-lint.sh
 # PostToolUse hook — auto-lint after file writes (async, no block)
 set -euo pipefail
+trap 'echo "Hook crashed: $0" >&2; exit 2' ERR
 
 PROJ_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 AGENT_NAME="${WARROOM_AGENT_NAME:-engineer}"
