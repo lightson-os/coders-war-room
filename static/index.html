@@ -13,37 +13,64 @@
 <link rel="apple-touch-icon" href="/icon-192.png">
 <style>
   :root {
-    --bg-void: #060810;
-    --bg-deep: #0a0d14;
-    --bg-panel: #0e1119;
-    --bg-card: #121620;
-    --bg-card-hover: #171c28;
-    --bg-elevated: #1a2030;
-    --border: #1a2030;
-    --border-bright: #243044;
-    --text-primary: #d8dee8;
-    --text-secondary: #7a8a9e;
-    --text-dim: #3e4e64;
-    --green: #00e676;
-    --green-dim: rgba(0,230,118,0.12);
-    --yellow: #ffd740;
-    --yellow-dim: rgba(255,215,64,0.10);
+    /* North Star Design System v4.4 — Evolution Domain */
+    --void: #000000;
+    --container-low: #131313;
+    --container-high: #1B1B1B;
+    --text-primary: #F2F2F7;
+    --text-secondary: rgba(242, 242, 247, 0.6);
+    --text-faint: rgba(242, 242, 247, 0.3);
+    --domain-evolution: #a86fdf;
+    --domain-evolution-glow: rgba(168, 111, 223, 0.08);
+    --domain-evolution-neon: rgba(168, 111, 223, 0.15);
+    --trinity-approve: #32D74B;
+    --trinity-deny: #FF453A;
+    --trinity-modify: #FBBC05;
+    --radius-card: 14px;
+    --radius-pill: 9999px;
+    --padding-card: 24px;
+    --gap-items: 16px;
+    --grid: 8px;
+    --font-body: 'Source Sans 3', -apple-system, sans-serif;
+    --font-system: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-size-body: 17px;
+    --font-size-system: 11px;
+    --font-size-mono: 12px;
+    /* Elevation shadows */
+    --shadow-content: 0 4px 16px rgba(0, 0, 0, 0.06);
+    --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-navigation: 0 24px 60px rgba(0, 0, 0, 0.12);
+    /* Legacy aliases — keep existing CSS working */
+    --bg-void: #000000;
+    --bg-deep: #0a0a0a;
+    --bg-panel: #131313;
+    --bg-card: #131313;
+    --bg-card-hover: #1B1B1B;
+    --bg-elevated: #1B1B1B;
+    --border: #1B1B1B;
+    --border-bright: #2a2a2a;
+    --text-dim: rgba(242, 242, 247, 0.3);
+    --green: #32D74B;
+    --green-dim: rgba(50, 215, 75, 0.12);
+    --yellow: #FBBC05;
+    --yellow-dim: rgba(251, 188, 5, 0.10);
     --cyan: #18ffff;
-    --cyan-dim: rgba(24,255,255,0.10);
+    --cyan-dim: rgba(24, 255, 255, 0.10);
     --orange: #ff9100;
-    --orange-dim: rgba(255,145,0,0.08);
-    --red: #ff5252;
-    --red-dim: rgba(255,82,82,0.08);
+    --orange-dim: rgba(255, 145, 0, 0.08);
+    --red: #FF453A;
+    --red-dim: rgba(255, 69, 58, 0.08);
     --blue: #448aff;
-    --blue-dim: rgba(68,138,255,0.10);
-    --purple: #b388ff;
+    --blue-dim: rgba(68, 138, 255, 0.10);
+    --purple: #a86fdf;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'Outfit', -apple-system, sans-serif;
-    background: var(--bg-void);
+    font-family: 'Source Sans 3', -apple-system, sans-serif;
+    background: var(--void);
     color: var(--text-primary);
     height: 100vh;
     display: flex;
