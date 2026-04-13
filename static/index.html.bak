@@ -1,0 +1,4128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>War Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#060810">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+  :root {
+    /* North Star Design System v4.4 — Evolution Domain */
+    --void: #000000;
+    --container-low: #131313;
+    --container-high: #1B1B1B;
+    --text-primary: #F2F2F7;
+    --text-secondary: rgba(242, 242, 247, 0.6);
+    --text-faint: rgba(242, 242, 247, 0.3);
+    --domain-evolution: #a86fdf;
+    --domain-evolution-glow: rgba(168, 111, 223, 0.08);
+    --domain-evolution-neon: rgba(168, 111, 223, 0.15);
+    --trinity-approve: #32D74B;
+    --trinity-deny: #FF453A;
+    --trinity-modify: #FBBC05;
+    --radius-card: 14px;
+    --radius-pill: 9999px;
+    --padding-card: 24px;
+    --gap-items: 16px;
+    --grid: 8px;
+    --font-body: 'Source Sans 3', -apple-system, sans-serif;
+    --font-system: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-size-body: 17px;
+    --font-size-system: 11px;
+    --font-size-mono: 12px;
+    /* Elevation shadows */
+    --shadow-content: 0 4px 16px rgba(0, 0, 0, 0.06);
+    --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-navigation: 0 24px 60px rgba(0, 0, 0, 0.12);
+    /* Legacy aliases — keep existing CSS working */
+    --bg-void: #000000;
+    --bg-deep: #0a0a0a;
+    --bg-panel: #131313;
+    --bg-card: #131313;
+    --bg-card-hover: #1B1B1B;
+    --bg-elevated: #1B1B1B;
+    --border: #1B1B1B;
+    --border-bright: #2a2a2a;
+    --text-dim: rgba(242, 242, 247, 0.3);
+    --green: #32D74B;
+    --green-dim: rgba(50, 215, 75, 0.12);
+    --yellow: #FBBC05;
+    --yellow-dim: rgba(251, 188, 5, 0.10);
+    --cyan: #18ffff;
+    --cyan-dim: rgba(24, 255, 255, 0.10);
+    --orange: #ff9100;
+    --orange-dim: rgba(255, 145, 0, 0.08);
+    --red: #FF453A;
+    --red-dim: rgba(255, 69, 58, 0.08);
+    --blue: #448aff;
+    --blue-dim: rgba(68, 138, 255, 0.10);
+    --purple: #a86fdf;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Source Sans 3', -apple-system, sans-serif;
+    background: var(--void);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ═══════════ HEADER ═══════════ */
+  header {
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .h-left { display: flex; align-items: center; gap: 12px; }
+
+  .h-logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--green);
+    text-shadow: 0 0 24px rgba(0,230,118,0.12);
+  }
+
+  .h-sep { width: 1px; height: 14px; background: var(--border-bright); }
+
+  .h-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .conn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .conn.on { color: var(--green); background: var(--green-dim); border: 1px solid rgba(0,230,118,0.25); }
+  .conn.off { color: var(--red); background: var(--red-dim); border: 1px solid rgba(255,82,82,0.25); animation: blink 2s infinite; }
+  @keyframes blink { 50% { opacity: 0.4; } }
+
+  /* ═══════════ LAYOUT ═══════════ */
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* ═══════════ SIDEBAR ═══════════ */
+  .sidebar {
+    width: 300px;
+    background: var(--bg-deep);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .sb-head {
+    padding: 12px 16px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sb-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .sb-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    background: var(--bg-card);
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+
+  .agents {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px;
+  }
+
+  /* ─── Agent Card ─── */
+  .ac {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: var(--padding-card);
+    margin-bottom: 8px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .ac:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-bright);
+  }
+
+  .ac.off {
+    opacity: 0.3;
+    border-style: dashed;
+  }
+
+  /* Row 1: dot + name + action buttons */
+  .ac-row1 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot.active { background: var(--green); box-shadow: 0 0 8px rgba(0,230,118,0.5); }
+  .dot.busy { background: var(--yellow); box-shadow: 0 0 8px rgba(255,215,64,0.4); animation: glow-y 1.2s ease-in-out infinite; }
+  .dot.typing { background: var(--cyan); box-shadow: 0 0 8px rgba(24,255,255,0.4); animation: pulse-c 0.8s ease-in-out infinite; }
+  .dot.session { background: var(--text-dim); }
+  .dot.offline { background: #555; }
+
+  @keyframes glow-y { 50% { box-shadow: 0 0 14px rgba(255,215,64,0.7); } }
+  @keyframes pulse-c { 50% { transform: scale(1.4); opacity: 0.7; } }
+
+  .agent-avatar {
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .agent-avatar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .agent-avatar-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: white;
+  }
+
+  /* Desktop: hide card-level avatar (mobile will show it) */
+  .ac > .agent-avatar { display: none; }
+
+  /* Desktop: hide mobile-only card elements */
+  .mobile-card-body { display: none; }
+
+  .ac-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    flex: 1;
+    cursor: pointer;
+  }
+
+  .ac-name:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+  .ac-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .abtn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .abtn-cli {
+    color: var(--blue);
+    border-color: rgba(68,138,255,0.3);
+  }
+  .abtn-cli:hover {
+    background: var(--blue-dim);
+    border-color: var(--blue);
+    box-shadow: 0 0 8px rgba(68,138,255,0.15);
+  }
+
+  .abtn-msg {
+    color: var(--text-secondary);
+    border-color: var(--border-bright);
+  }
+  .abtn-msg:hover {
+    color: var(--green);
+    border-color: rgba(0,230,118,0.3);
+    background: var(--green-dim);
+  }
+
+  .abtn-off {
+    color: var(--text-dim);
+    border-color: var(--border);
+  }
+  .abtn-off:hover {
+    color: var(--red);
+    border-color: rgba(255,82,82,0.4);
+    background: var(--red-dim);
+  }
+
+  .abtn-on {
+    color: var(--green);
+    border-color: rgba(0,230,118,0.3);
+  }
+  .abtn-on:hover {
+    background: var(--green-dim);
+    border-color: var(--green);
+  }
+
+  /* Row 2: role + status */
+  .ac-row2 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    padding-left: 15px;
+  }
+
+  .ac-role {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .ac-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  .st-active { color: var(--green); background: var(--green-dim); }
+  .st-busy { color: var(--yellow); background: var(--yellow-dim); }
+  .st-typing { color: var(--cyan); background: var(--cyan-dim); }
+  .st-session { color: var(--text-dim); background: rgba(62,78,100,0.2); }
+  .st-offline { color: #666; background: rgba(100,100,100,0.1); }
+  .st-deboarded { color: var(--red); background: var(--red-dim); }
+
+  /* Row 3: activity (only when busy/typing) */
+  .ac-activity {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    margin-top: 4px;
+    padding-left: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--yellow);
+  }
+
+  .ac-activity.tp { color: var(--cyan); }
+
+  /* ═══════════ CHAT ═══════════ */
+  .chat { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  .messages { flex: 1; overflow-y: auto; padding: 16px 24px; }
+
+  /* Operator card (gurvinder) — visually distinct */
+  .ac-operator {
+    background: linear-gradient(135deg, rgba(255,145,0,0.06) 0%, var(--bg-card) 100%);
+    border-color: rgba(255,145,0,0.2);
+    margin-bottom: 10px;
+  }
+
+  .ac-operator:hover { border-color: rgba(255,145,0,0.35); }
+
+  .ac-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0 8px;
+  }
+
+  /* Role tooltip */
+  .ac-role {
+    position: relative;
+    cursor: default;
+  }
+
+  .ac-role[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-bright);
+    color: var(--text-primary);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: normal;
+    width: 240px;
+    z-index: 50;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .msg {
+    margin-bottom: 2px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: var(--bg-card);
+    border-left: 3px solid var(--border);
+    animation: fadein 0.15s ease-out;
+  }
+
+  /* Grouped messages: same sender in a row — hide header, tighter spacing */
+  .msg.grouped {
+    margin-top: 0;
+    padding-top: 2px;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .msg.grouped .msg-head { display: none; }
+
+  .msg.group-start {
+    margin-top: 10px;
+    border-radius: 6px 6px 0 0;
+    padding-bottom: 2px;
+  }
+
+  .msg.standalone { margin-bottom: 10px; }
+
+  @keyframes fadein { from { opacity: 0; transform: translateY(3px); } }
+
+  .msg.direct { background: var(--orange-dim); border-left-color: var(--orange); }
+  .msg.system { background: transparent; border-left: none; color: var(--text-dim); font-style: italic; font-size: 11px; padding: 3px 14px; animation: none; margin-bottom: 6px; }
+
+  .msg-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
+
+  .msg-sender { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12px; }
+  .msg-tag { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--orange); background: var(--orange-dim); padding: 1px 6px; border-radius: 3px; }
+  .msg-time { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .msg-body { font-family: 'Source Sans 3', -apple-system, sans-serif; font-size: 14.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; color: var(--text-primary); }
+
+  /* ═══════════ INPUT ═══════════ */
+  .input-bar {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  .target-sel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .target-sel:focus { border-color: var(--blue); outline: none; }
+
+  .msg-input {
+    flex: 1;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 8px 14px;
+    border-radius: 4px;
+    resize: none;
+    min-height: 38px;
+    max-height: 120px;
+  }
+  .msg-input:focus { border-color: var(--blue); outline: none; }
+  .msg-input::placeholder { color: var(--text-dim); }
+
+  /* ─── Drop zones ─── */
+  .msg-input.drop-active {
+    border-color: var(--blue) !important;
+    box-shadow: 0 0 12px rgba(68,138,255,0.2);
+  }
+
+  .ac.drop-active {
+    border-color: var(--green) !important;
+    box-shadow: 0 0 12px rgba(0,230,118,0.2);
+  }
+
+  .send-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: var(--green);
+    color: var(--bg-void);
+    border: none;
+    padding: 9px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+  .send-btn:hover { box-shadow: 0 0 16px rgba(0,230,118,0.25); }
+  .send-btn:disabled { background: var(--border); color: var(--text-dim); box-shadow: none; cursor: default; }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex: 1;
+  }
+
+  /* Desktop: hide mobile-only input elements */
+  .input-pill { display: contents; }
+  .pill-attach { display: none; }
+  .attach-chip { display: none; }
+  .send-arrow { display: none; }
+  .send-text { display: inline; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+  /* ═══════════ + NEW BUTTON ═══════════ */
+  .btn-new-agent {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(0,230,118,0.25);
+    padding: 2px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-new-agent:hover {
+    background: rgba(0,230,118,0.2);
+    border-color: var(--green);
+    box-shadow: 0 0 8px rgba(0,230,118,0.15);
+  }
+
+  /* ═══════════ DRAWER ═══════════ */
+  .drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .drawer-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .drawer {
+    position: fixed;
+    top: 0;
+    right: -440px;
+    width: 420px;
+    height: 100vh;
+    background: var(--bg-panel);
+    border-left: 1px solid var(--border);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -8px 0 24px rgba(0,0,0,0.4);
+  }
+  .drawer.open { right: 0; }
+
+  .drawer-head {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .drawer-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+  }
+
+  .drawer-close {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .drawer-close:hover {
+    color: var(--red);
+    background: var(--red-dim);
+  }
+
+  .drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .drawer-field {}
+
+  .drawer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .drawer-input {
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 9px 12px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .drawer-input:focus { border-color: var(--blue); }
+  .drawer-input::placeholder { color: var(--text-dim); }
+
+  .drawer-textarea {
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 9px 12px;
+    border-radius: 4px;
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+    transition: border-color 0.15s;
+  }
+  .drawer-textarea:focus { border-color: var(--blue); }
+  .drawer-textarea::placeholder { color: var(--text-dim); }
+
+  .color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 0;
+  }
+
+  .color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.selected { border-color: white; }
+
+  .icon-picker {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    padding: 4px 0;
+  }
+
+  .icon-cell {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    background: var(--bg-deep);
+    transition: border-color 0.15s;
+  }
+
+  .icon-cell:hover { background: var(--bg-card-hover); }
+  .icon-cell.selected { border-color: var(--green); }
+
+  .icon-cell svg { width: 22px; height: 22px; fill: var(--text-secondary); }
+
+  .drawer-select {
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 9px 12px;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a8a9e'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+  .drawer-select:focus { border-color: var(--blue); }
+
+  /* ─── Directory browser ─── */
+  .dir-browser {
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .dir-browser-path {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+  }
+
+  .dir-browser-up {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .dir-browser-up:hover {
+    color: var(--blue);
+    border-color: var(--blue);
+    background: var(--blue-dim);
+  }
+
+  .dir-browser-current {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+
+  .dir-browser-list {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 4px 0;
+  }
+
+  .dir-browser-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dir-browser-item:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+  }
+
+  .dir-browser-empty {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 10px 12px;
+    font-style: italic;
+  }
+
+  .dir-browser-select {
+    display: block;
+    width: calc(100% - 16px);
+    margin: 6px 8px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(0,230,118,0.25);
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .dir-browser-select:hover {
+    background: rgba(0,230,118,0.2);
+    border-color: var(--green);
+  }
+
+  .dir-browser-loading {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 10px 12px;
+  }
+
+  /* ─── Selected dir pill ─── */
+  .dir-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(0,230,118,0.25);
+    padding: 5px 10px;
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+
+  .dir-pill-path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 320px;
+  }
+
+  .dir-pill-clear {
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    padding: 0 2px;
+    transition: color 0.15s;
+    line-height: 1;
+  }
+  .dir-pill-clear:hover { color: var(--red); }
+
+  /* ─── Toggle switch ─── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-bright);
+    transition: all 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-track {
+    background: var(--green-dim);
+    border-color: rgba(0,230,118,0.4);
+  }
+
+  .toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: all 0.2s;
+    pointer-events: none;
+  }
+
+  .toggle-switch input:checked ~ .toggle-knob {
+    left: 19px;
+    background: var(--green);
+  }
+
+  /* ─── Launch button ─── */
+  .btn-launch {
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: var(--green);
+    color: var(--bg-void);
+    border: none;
+    padding: 12px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .btn-launch:hover {
+    box-shadow: 0 0 20px rgba(0,230,118,0.25);
+  }
+  .btn-launch:disabled {
+    background: var(--border);
+    color: var(--text-dim);
+    box-shadow: none;
+    cursor: default;
+  }
+
+  .drawer-error {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--red);
+    background: var(--red-dim);
+    border: 1px solid rgba(255,82,82,0.25);
+    border-radius: 4px;
+    padding: 8px 12px;
+    display: none;
+  }
+  .drawer-error.show { display: block; }
+
+  /* ─── Dynamic agent indicator ─── */
+  .ac-dynamic {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-left: 4px;
+    opacity: 0.6;
+  }
+
+  /* ─── Progress bar ─── */
+  .ac-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    padding-left: 15px;
+  }
+
+  .ac-progress-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    max-width: 120px;
+  }
+
+  .ac-progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .ac-progress-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  /* ─── Blocker ─── */
+  .ac-blocker {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 3px 8px 3px 15px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--red);
+    background: var(--red-dim);
+    border-radius: 3px;
+    margin-left: 15px;
+    margin-right: 4px;
+  }
+
+
+  /* ─── Last commit ─── */
+  .ac-commit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    padding-left: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ═══════════ GATE STATUS ═══════════ */
+  .ac-gates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--grid, 8px);
+    margin-top: 8px;
+  }
+
+  .gate-dot {
+    font-family: var(--font-system, 'Inter', sans-serif);
+    font-size: var(--font-size-system, 11px);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.2);
+    cursor: default;
+  }
+
+  .gate-dot.pass { color: var(--trinity-approve, #32D74B); }
+  .gate-dot.fail { color: var(--trinity-deny, #FF453A); }
+
+  .ac-last-event {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: var(--font-size-mono, 12px);
+    color: var(--text-secondary, #7a8a9e);
+    margin-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ac-model-pill {
+    background: var(--domain-evolution-neon, rgba(168, 111, 223, 0.15));
+    color: var(--text-primary, #F2F2F7);
+    border-radius: var(--radius-pill, 9999px);
+    padding: 2px 10px;
+    font-family: var(--font-system, 'Inter', sans-serif);
+    font-size: var(--font-size-system, 11px);
+    text-transform: uppercase;
+    margin-left: auto;
+  }
+
+  /* ─── Stalled / Blocked card borders ─── */
+  .ac.stalled { border-color: rgba(255,215,64,0.3); }
+  .ac.blocked-card { border-color: rgba(255,82,82,0.3); }
+
+  .ac-stalled-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--yellow);
+    margin-top: 3px;
+    padding-left: 15px;
+  }
+
+  /* ─── De-boarded section ─── */
+  .sb-section-head {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 8px 12px 4px;
+  }
+
+  .abtn-remove {
+    color: var(--red);
+    border-color: rgba(255,82,82,0.25);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .abtn-remove:hover {
+    background: var(--red-dim);
+    border-color: var(--red);
+    box-shadow: 0 0 8px rgba(255,82,82,0.15);
+  }
+
+  /* ═══════════ FILE PANEL ═══════════ */
+  .file-panel {
+    width: 280px;
+    background: var(--bg-deep);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .fp-head {
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .fp-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .fp-path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fp-tree {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .fp-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.1s;
+    user-select: none;
+  }
+
+  .fp-item:hover { background: var(--bg-card-hover); }
+
+  .fp-item.dir { color: var(--text-secondary); }
+  .fp-item.file { color: var(--text-dim); }
+
+  .fp-arrow {
+    font-size: 8px;
+    width: 10px;
+    text-align: center;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .fp-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fp-item[data-depth="0"] { padding-left: 10px; }
+  .fp-item[data-depth="1"] { padding-left: 26px; }
+  .fp-item[data-depth="2"] { padding-left: 42px; }
+  .fp-item[data-depth="3"] { padding-left: 58px; }
+  .fp-item[data-depth="4"] { padding-left: 74px; }
+
+  .fp-item.dragging { opacity: 0.5; }
+
+  /* ─── Agent card drag reorder ─── */
+  .ac.reorder-dragging {
+    opacity: 0.4;
+    border: 1px dashed var(--border-bright);
+  }
+
+  .ac.reorder-over {
+    border-top: 2px solid var(--green);
+  }
+
+  .ac-drag-handle {
+    cursor: grab;
+    color: var(--text-dim);
+    font-size: 10px;
+    padding: 0 2px;
+    flex-shrink: 0;
+    user-select: none;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+  }
+
+  .ac:hover .ac-drag-handle { opacity: 1; }
+  .ac-drag-handle:active { cursor: grabbing; }
+
+  /* ─── Dead session card ─── */
+  .ac.session-dead {
+    border-color: rgba(255,82,82,0.4);
+    background: rgba(255,82,82,0.03);
+  }
+
+  .ac-dead-warning {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--red);
+    margin-top: 4px;
+    padding-left: 15px;
+  }
+
+  .abtn-recover {
+    color: var(--red);
+    border-color: rgba(255,82,82,0.3);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    animation: pulse-recover 2s infinite;
+  }
+  .abtn-recover:hover { background: var(--red-dim); border-color: var(--red); }
+  @keyframes pulse-recover { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* ─── Server bar ─── */
+  .server-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+  }
+  .server-stat { color: var(--text-dim); letter-spacing: 0.5px; }
+  .server-stat-value { color: var(--text-secondary); }
+  .server-la-active { color: var(--green); }
+  .server-la-inactive { color: var(--text-dim); }
+  .server-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--border-bright);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .server-btn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+
+  /* ═══════════ HIDE TAB BAR ON DESKTOP ═══════════ */
+  @media (min-width: 768px) {
+    .tab-bar { display: none !important; }
+  }
+
+  /* ═══════════ MOBILE RESPONSIVE ═══════════ */
+  @media (max-width: 767px) {
+    /* ═══ Mobile CSS Variables ═══ */
+    :root {
+      --bubble-radius-sent: 16px 16px 4px 16px;
+      --bubble-radius-received: 4px 12px 12px 12px;
+      --bubble-max-sent: 80%;
+      --bubble-max-received: 85%;
+      --green-bubble-bg: rgba(0, 230, 118, 0.12);
+      --input-pill-radius: 20px;
+      --input-pill-height: 40px;
+      --send-btn-size: 28px;
+    }
+
+    /* ═══ Tab Bar ═══ */
+    .tab-bar {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      padding: 6px 0;
+      padding-bottom: env(safe-area-inset-bottom, 8px);
+      z-index: 200;
+    }
+
+    .tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      padding: 4px 0;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .tab.active { color: var(--green); }
+    .tab-icon { font-size: 20px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+    .tab-label { letter-spacing: 0.5px; }
+
+    /* ═══ Layout: single column ═══ */
+    .main { flex-direction: column; }
+
+    .sidebar {
+      display: none;
+      width: 100%;
+      height: calc(100vh - 50px - env(safe-area-inset-bottom, 8px));
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      overflow-y: auto;
+    }
+
+    .file-panel {
+      display: none;
+      width: 100%;
+      height: calc(100vh - 50px - env(safe-area-inset-bottom, 8px));
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      overflow-y: auto;
+    }
+
+    .sidebar.mobile-active, .file-panel.mobile-active {
+      display: flex;
+    }
+
+    .chat {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat.mobile-hidden { display: none; }
+
+    .chat .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 140px; /* Initial estimate — ResizeObserver updates dynamically */
+    }
+
+    /* ═══ Header compact ═══ */
+    header { padding: 8px 12px; }
+    .h-logo { font-size: 11px; letter-spacing: 3px; }
+    .h-sub { display: none; }
+    .h-sep { display: none; }
+    .server-stat { display: none; }
+    .server-btn { display: none; }
+    #rollCallBtn { font-size: 8px; padding: 2px 8px; }
+
+    /* ═══ Input area — fixed above tab bar ═══ */
+    .input-bar {
+      position: fixed;
+      bottom: calc(50px + env(safe-area-inset-bottom, 8px));
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      gap: 4px;
+      padding: 8px 12px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .input-target {
+      display: block !important;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--green);
+      padding: 2px 0;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .target-sel { display: none; }
+
+    /* Attachment chip — shown via JS, hidden by default */
+    .attach-chip {
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-secondary);
+      width: fit-content;
+    }
+
+    .attach-remove {
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0 2px;
+    }
+
+    .attach-remove:active { color: var(--red); }
+
+    /* Pill container */
+    .input-pill {
+      display: flex;
+      align-items: flex-end;
+      gap: 0;
+      background: var(--bg-deep);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 4px 4px 4px 10px;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+
+    .input-pill:focus-within { border-color: var(--blue); }
+
+    /* Attach button inside pill */
+    .pill-attach {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      font-size: 18px;
+      padding: 4px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      flex-shrink: 0;
+    }
+
+    /* Textarea inside pill */
+    .input-pill .msg-input {
+      flex: 1;
+      font-family: 'Source Sans 3', -apple-system, sans-serif;
+      font-size: 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      padding: 6px 8px;
+      resize: none;
+      min-height: 32px;
+      max-height: 88px;
+      line-height: 1.4;
+      outline: none;
+    }
+
+    .input-pill .msg-input::placeholder { color: var(--text-dim); }
+
+    /* Circular send button — iMessage style */
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
+      border: none;
+      color: var(--bg-void);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0;
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 8px rgba(0, 230, 118, 0.3);
+    }
+
+    .send-btn:active {
+      transform: scale(0.88);
+      box-shadow: 0 1px 4px rgba(0, 230, 118, 0.2);
+    }
+
+    .send-btn .send-text { display: none; }
+    .send-btn .send-arrow { display: flex; align-items: center; justify-content: center; }
+
+    .send-btn.visible { display: flex; }
+    .send-btn:disabled { display: none; }
+
+    .input-row {
+      display: flex;
+      gap: 0;
+      align-items: flex-end;
+      width: 100%;
+    }
+
+    /* Hide the old separate attach button */
+    .input-attach { display: none !important; }
+
+    /* ═══ Messages — iMessage Hybrid ═══ */
+    .messages {
+      padding: 12px 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Base message — agent card (left-aligned) */
+    .msg {
+      padding: 10px 12px;
+      border-radius: 4px 12px 12px 12px;
+      background: var(--bg-card);
+      border-left: 4px solid var(--border);
+      max-width: 85%;
+      align-self: flex-start;
+      margin-bottom: 2px;
+    }
+
+    .msg-body {
+      font-family: 'Source Sans 3', -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .msg-sender { font-size: 12px; font-weight: 700; }
+    .msg-time { font-size: 11px; }
+
+    /* User message — right-aligned green bubble */
+    .msg.msg-user {
+      align-self: flex-end;
+      background: var(--green-bubble-bg);
+      border-left: none;
+      border-radius: 16px 16px 4px 16px;
+      max-width: 80%;
+      text-align: left;
+    }
+
+    .msg.msg-user .msg-head { display: none; }
+
+    .msg.msg-user .msg-time-below {
+      display: block;
+      text-align: right;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Direct messages — orange tint on border */
+    .msg.direct {
+      border-left-color: var(--orange);
+      background: var(--bg-card);
+    }
+
+    .msg.msg-user.direct {
+      border-left: none;
+      background: rgba(255, 145, 0, 0.10);
+    }
+
+    /* System messages — centered, no bubble */
+    .msg.system {
+      align-self: center;
+      max-width: 90%;
+      background: transparent;
+      border-left: none;
+      text-align: center;
+      font-size: 12px;
+      font-style: italic;
+      color: var(--text-dim);
+      padding: 4px 12px;
+      margin: 4px 0;
+    }
+
+    /* Grouping: same sender within 20s */
+    .msg.grouped {
+      margin-top: 4px;
+      border-radius: 4px 12px 12px 12px;
+    }
+
+    .msg.msg-user.grouped {
+      border-radius: 16px 16px 4px 16px;
+    }
+
+    .msg.grouped .msg-head { display: none; }
+    .msg.msg-user.grouped .msg-time-below { display: none; }
+
+    .msg.group-start {
+      margin-top: 12px;
+    }
+
+    .msg.standalone {
+      margin-top: 12px;
+      margin-bottom: 2px;
+    }
+
+    /* Time divider */
+    .time-divider {
+      align-self: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-dim);
+      padding: 4px 12px;
+      margin: 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .time-divider::before, .time-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ═══ Agent cards — mobile redesign ═══ */
+    .ac {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--bg-card);
+      margin-bottom: 8px;
+      border-left: none;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .ac.off, .ac.session-dead { opacity: 0.6; }
+
+    .ac-operator {
+      background: var(--bg-elevated);
+    }
+
+    /* Hide desktop-only elements on mobile */
+    .ac-row1 { display: none; }
+    .ac-row2 { display: none; }
+    .ac-activity { display: none; }
+    .ac-progress { display: none; }
+    .ac-blocker { display: none; }
+    .ac-stalled-text { display: none; }
+    .ac-dead-warning { display: none; }
+    .ac-commit { display: none; }
+    .ac-sep { display: none; }
+    .ac-actions { display: none; }
+    .abtn { display: none; }
+
+    /* Show card-level avatar on mobile */
+    .ac > .agent-avatar { display: flex; }
+
+    /* Mobile card body */
+    .mobile-card-body {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      align-items: center;
+    }
+
+    .mobile-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mobile-card-name {
+      font-family: 'Source Sans 3', -apple-system, sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mobile-card-role {
+      font-family: 'Source Sans 3', -apple-system, sans-serif;
+      font-size: 13px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .mobile-card-status {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+
+    .mobile-status-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mobile-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .mobile-status-word {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    /* Presence colors for mobile dots */
+    .mobile-status-dot.active { background: var(--green); }
+    .mobile-status-dot.busy { background: var(--yellow); }
+    .mobile-status-dot.typing { background: var(--cyan); }
+    .mobile-status-dot.session { background: var(--text-dim); }
+    .mobile-status-dot.offline { background: #555; }
+
+    .mobile-status-word.active { color: var(--green); }
+    .mobile-status-word.busy { color: var(--yellow); }
+    .mobile-status-word.typing { color: var(--cyan); }
+    .mobile-status-word.session { color: var(--text-dim); }
+    .mobile-status-word.offline { color: #555; }
+
+    /* ═══ Drawer: full screen ═══ */
+    .drawer { width: 100%; right: -100%; }
+    .drawer.open { right: 0; }
+
+    /* ═══ Drawer form — mobile typography ═══ */
+    .drawer-title {
+      font-size: 16px;
+    }
+
+    .drawer-close {
+      width: 32px;
+      height: 32px;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drawer-body {
+      padding: 16px;
+    }
+
+    .drawer-field {
+      margin-bottom: 20px;
+    }
+
+    .drawer-label {
+      font-family: 'Source Sans 3', -apple-system, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+      margin-bottom: 8px;
+    }
+
+    .drawer-input {
+      font-size: 17px;
+      min-height: 48px;
+      padding: 12px 14px;
+      border-radius: 10px;
+    }
+
+    .drawer-textarea {
+      font-size: 17px;
+      min-height: 100px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      line-height: 1.5;
+    }
+
+    .drawer-select {
+      font-size: 17px;
+      min-height: 48px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a8a9e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    .toggle-row {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+    }
+
+    .toggle-row .drawer-label {
+      font-size: 14px;
+    }
+
+    .btn-launch {
+      min-height: 52px;
+      font-size: 17px;
+      border-radius: 12px;
+    }
+
+    /* ═══ Color + Icon Pickers — mobile ═══ */
+    .color-picker {
+      gap: 8px;
+      padding: 8px 0;
+    }
+
+    .color-swatch {
+      width: 32px;
+      height: 32px;
+    }
+
+    .icon-picker {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding: 8px 0;
+    }
+
+    .icon-cell {
+      width: auto;
+      height: 48px;
+      border-radius: 10px;
+    }
+
+    .icon-cell svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    /* ═══ Directory Browser — mobile ═══ */
+    .dir-browser {
+      border-radius: 10px;
+    }
+
+    .dir-browser-path {
+      padding: 10px 12px;
+    }
+
+    .dir-browser-up {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      font-size: 16px;
+    }
+
+    .dir-browser-current {
+      font-size: 13px;
+    }
+
+    .dir-browser-item {
+      min-height: 48px;
+      padding: 12px 14px;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dir-browser-select {
+      min-height: 48px;
+      font-size: 16px;
+      border-radius: 10px;
+      margin: 10px;
+    }
+
+    /* ═══ File tree — mobile ═══ */
+    .fp-item {
+      padding: 12px 14px;
+      font-size: 15px;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .fp-head {
+      padding: 10px 14px;
+    }
+
+    .fp-title {
+      font-size: 12px;
+    }
+
+    .fp-path {
+      font-size: 12px;
+    }
+
+    .fp-tree {
+      padding: 0 4px;
+    }
+
+    /* ═══ Bottom Sheets ═══ */
+    .bottom-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border-bright);
+      border-radius: 16px 16px 0 0;
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 8px));
+      z-index: 300;
+      transform: translateY(100%);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .bottom-sheet.open { transform: translateY(0); }
+
+    .bottom-sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 299;
+      display: none;
+    }
+
+    .bottom-sheet-overlay.open { display: block; }
+
+    .bs-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bs-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 10px;
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 17px;
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 52px;
+    }
+
+    .bs-item:last-child { border-bottom: none; }
+    .bs-item:active { background: var(--bg-card-hover); }
+
+    .bs-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .bs-cancel {
+      text-align: center;
+      padding: 16px;
+      color: var(--red);
+      font-family: 'Source Sans 3', sans-serif;
+      font-size: 17px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ═══ Hide CLI button on mobile (can't open Warp from phone) ═══ */
+    .abtn-cli { display: none; }
+
+    /* ═══ Mobile Settings gear ═══ */
+    #mobileSettings { display: inline-block !important; }
+  }
+
+  /* ═══════════ GATES DASHBOARD ═══════════ */
+  .gates-dashboard {
+    padding: 20px;
+    overflow-y: auto;
+    height: 100%;
+  }
+
+  .gates-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .gates-refresh {
+    background: var(--container-high, #1B1B1B);
+    border: 1px solid var(--border, #1B1B1B);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-family: var(--font-system);
+    font-size: var(--font-size-system);
+    cursor: pointer;
+  }
+
+  .gates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .gate-card {
+    background: var(--container-low, #131313);
+    border-radius: var(--radius-card, 14px);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gate-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle at top left, var(--domain-evolution-glow), transparent);
+    pointer-events: none;
+  }
+  .gate-card.gate-pass::before {
+    background: radial-gradient(circle at top left, rgba(50, 215, 75, 0.08), transparent);
+  }
+  .gate-card.gate-fail::before {
+    background: radial-gradient(circle at top left, rgba(255, 69, 58, 0.08), transparent);
+  }
+
+  .gate-card-title {
+    font-family: var(--font-system);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+  }
+
+  .gate-tool-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+
+  .gate-tool-name {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-mono);
+    color: var(--text-secondary);
+  }
+
+  .gate-tool-status {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-mono);
+  }
+
+  .gate-tool-status.pass { color: var(--trinity-approve); }
+  .gate-tool-status.fail { color: var(--trinity-deny); }
+  .gate-tool-status.pending { color: var(--text-faint, rgba(242,242,247,0.3)); }
+
+  /* ═══════════ DRAG-DROP FILE UPLOAD ═══════════ */
+  .drag-active {
+    outline: 2px dashed var(--domain-evolution, #a86fdf) !important;
+    background: var(--domain-evolution-neon, rgba(168, 111, 223, 0.15)) !important;
+    border-radius: var(--radius-card, 14px);
+  }
+
+  .file-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--container-high, #1B1B1B);
+    border-radius: var(--radius-pill, 9999px);
+    padding: 4px 12px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-mono);
+    color: var(--text-secondary);
+  }
+
+  /* ═══════════ GATES PANEL ═══════════ */
+  .gates-panel {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--void);
+    z-index: 10;
+    overflow-y: auto;
+  }
+
+  .gates-panel.mobile-active {
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-left">
+    <span class="h-logo">War Room</span>
+    <span class="h-sep"></span>
+    <span class="h-sub">North Star Daemon</span>
+  </div>
+  <div class="server-bar">
+    <span class="server-stat">uptime: <span id="srvUptime" class="server-stat-value">--</span></span>
+    <span class="server-stat">LaunchAgent: <span id="srvLA" class="server-la-inactive">--</span></span>
+    <button class="server-btn" id="srvRestart" title="Restart server (requires LaunchAgent)">Restart</button>
+    <button class="server-btn" id="srvLogs" title="View server logs">Logs</button>
+    <span id="connBadge" class="conn off">offline</span>
+    <button id="rollCallBtn" class="conn on" style="cursor:pointer" title="Check who's alive">Roll Call</button>
+  </div>
+</header>
+
+<div class="main">
+  <aside class="sidebar">
+    <div class="sb-head">
+      <span class="sb-title">Agents</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span id="agentCount" class="sb-count">0 / 0</span>
+        <button id="btnNewAgent" class="btn-new-agent">+ new</button>
+      </div>
+    </div>
+    <div id="agentList" class="agents"></div>
+  </aside>
+
+  <div class="chat">
+    <div id="messages" class="messages"></div>
+    <div class="input-bar">
+      <div class="input-target" id="inputTarget" style="display:none">@all ▼</div>
+      <select id="targetSel" class="target-sel"><option value="all">@all</option></select>
+      <div id="attachChip" class="attach-chip" style="display:none">
+        <span id="attachName"></span>
+        <span id="attachRemove" class="attach-remove">✕</span>
+      </div>
+      <div class="input-row">
+        <div class="input-pill">
+          <button class="pill-attach" id="attachBtn" title="Attach">📎</button>
+          <textarea id="msgInput" class="msg-input" placeholder="Message the war room..." rows="1"></textarea>
+          <button id="sendBtn" class="send-btn" disabled>
+            <span class="send-text">Send</span>
+            <svg class="send-arrow" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="file-panel" id="filePanel">
+    <div class="fp-head">
+      <span class="fp-title">Files</span>
+      <span id="fpPath" class="fp-path"></span>
+    </div>
+    <div id="fileTree" class="fp-tree"></div>
+  </aside>
+
+  <div class="gates-panel" id="gatesPanel">
+    <div class="gates-dashboard" id="gatesDashboard">
+      <div class="gates-header">
+        <h2 style="font-family:var(--font-system);font-size:14px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin:0">Gate Status</h2>
+        <button class="gates-refresh" onclick="loadGatesDashboard()">Refresh</button>
+      </div>
+      <div class="gates-grid" id="gatesGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Tab Bar -->
+<nav class="tab-bar" id="tabBar">
+  <button class="tab active" data-tab="chat">
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+    <span class="tab-label">Chat</span>
+  </button>
+  <button class="tab" data-tab="agents">
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+    <span class="tab-label">Agents</span>
+  </button>
+  <button class="tab" data-tab="files">
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+    <span class="tab-label">Files</span>
+  </button>
+  <button class="tab" data-tab="gates">
+    <span class="tab-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+    <span class="tab-label">Gates</span>
+  </button>
+</nav>
+
+<!-- ═══════════ DRAWER OVERLAY ═══════════ -->
+<div id="drawerOverlay" class="drawer-overlay"></div>
+
+<!-- ═══════════ CREATE AGENT DRAWER ═══════════ -->
+<div id="drawer" class="drawer">
+  <div class="drawer-head">
+    <span class="drawer-title">New Agent</span>
+    <button id="drawerClose" class="drawer-close">&times;</button>
+  </div>
+  <div class="drawer-body">
+    <!-- Agent Name -->
+    <div class="drawer-field">
+      <label class="drawer-label">Agent Name</label>
+      <input id="dName" class="drawer-input" type="text" placeholder="my-agent" autocomplete="off" spellcheck="false">
+    </div>
+
+    <!-- Working Directory -->
+    <div class="drawer-field">
+      <label class="drawer-label">Working Directory</label>
+      <div id="dirSelectedWrap" style="display:none">
+        <div class="dir-pill">
+          <span id="dirPillPath" class="dir-pill-path"></span>
+          <span id="dirPillClear" class="dir-pill-clear">&times;</span>
+        </div>
+      </div>
+      <div id="dirBrowser" class="dir-browser">
+        <div class="dir-browser-path">
+          <button id="dirUp" class="dir-browser-up">&uarr;</button>
+          <span id="dirCurrent" class="dir-browser-current">~</span>
+        </div>
+        <div id="dirList" class="dir-browser-list"></div>
+        <button id="dirSelect" class="dir-browser-select">Select this directory</button>
+      </div>
+    </div>
+
+    <!-- Role Type -->
+    <div class="drawer-field">
+      <label class="drawer-label">Role Type</label>
+      <select id="dRoleType" class="drawer-select">
+        <option value="">Select a role...</option>
+        <option value="supervisor">Supervisor</option>
+        <option value="scout">Scout</option>
+        <option value="engineer">Engineer</option>
+        <option value="qa">QA</option>
+        <option value="git-agent">Git Agent</option>
+        <option value="chronicler">Chronicler</option>
+        <option value="other">Other (custom)</option>
+      </select>
+    </div>
+
+    <!-- Role Description -->
+    <div class="drawer-field">
+      <label class="drawer-label">Role Description</label>
+      <textarea id="dRole" class="drawer-textarea" rows="2" placeholder="Auto-filled from role type, or type custom..."></textarea>
+    </div>
+
+    <!-- Initial Prompt -->
+    <div class="drawer-field">
+      <label class="drawer-label">Initial Prompt <span style="color:var(--text-dim);font-size:9px;text-transform:none;letter-spacing:0">(optional)</span></label>
+      <textarea id="dPrompt" class="drawer-textarea" placeholder="Instructions to send after startup..."></textarea>
+    </div>
+
+    <!-- Color -->
+    <div class="drawer-field">
+      <label class="drawer-label">Color</label>
+      <div id="dColorPicker" class="color-picker">
+        <div class="color-swatch selected" data-color="#b388ff" style="background:#b388ff" title="Purple"></div>
+        <div class="color-swatch" data-color="#448aff" style="background:#448aff" title="Blue"></div>
+        <div class="color-swatch" data-color="#18ffff" style="background:#18ffff" title="Cyan"></div>
+        <div class="color-swatch" data-color="#ff5252" style="background:#ff5252" title="Red"></div>
+        <div class="color-swatch" data-color="#ffd740" style="background:#ffd740" title="Gold"></div>
+        <div class="color-swatch" data-color="#ff80ab" style="background:#ff80ab" title="Pink"></div>
+        <div class="color-swatch" data-color="#ff9100" style="background:#ff9100" title="Orange"></div>
+        <div class="color-swatch" data-color="#7a8a9e" style="background:#7a8a9e" title="Grey"></div>
+        <div class="color-swatch" data-color="#64ffda" style="background:#64ffda" title="Teal"></div>
+        <div class="color-swatch" data-color="#b9f6ca" style="background:#b9f6ca" title="Lime"></div>
+        <div class="color-swatch" data-color="#ff6e40" style="background:#ff6e40" title="Coral"></div>
+        <div class="color-swatch" data-color="#8c9eff" style="background:#8c9eff" title="Indigo"></div>
+        <div class="color-swatch" data-color="#ffcc80" style="background:#ffcc80" title="Amber"></div>
+        <div class="color-swatch" data-color="#84ffff" style="background:#84ffff" title="Mint"></div>
+        <div class="color-swatch" data-color="#f48fb1" style="background:#f48fb1" title="Salmon"></div>
+        <div class="color-swatch" data-color="#ce93d8" style="background:#ce93d8" title="Lavender"></div>
+      </div>
+    </div>
+
+    <!-- Icon -->
+    <div class="drawer-field">
+      <label class="drawer-label">Icon</label>
+      <div id="dIconPicker" class="icon-picker"></div>
+    </div>
+
+    <!-- Model -->
+    <div class="drawer-field">
+      <label class="drawer-label">Model</label>
+      <select id="dModel" class="drawer-select">
+        <option value="opus">Opus 4.6</option>
+        <option value="sonnet">Sonnet 4.6</option>
+        <option value="haiku">Haiku 4.5</option>
+      </select>
+      <div id="modelHint" style="display:none;font-family:var(--font-mono);font-size:11px;color:var(--domain-evolution);margin-top:4px"></div>
+    </div>
+
+    <!-- Skip Permissions -->
+    <div class="drawer-field">
+      <div class="toggle-row">
+        <label class="drawer-label" style="margin-bottom:0">Skip Permissions</label>
+        <label class="toggle-switch">
+          <input id="dSkipPerms" type="checkbox" checked>
+          <span class="toggle-track"></span>
+          <span class="toggle-knob"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="drawerError" class="drawer-error"></div>
+  </div>
+
+  <!-- Launch button pinned to bottom -->
+  <div style="padding:12px 20px 20px;flex-shrink:0;border-top:1px solid var(--border)">
+    <button id="btnLaunch" class="btn-launch">Launch Agent</button>
+  </div>
+</div>
+
+<script>
+const COLORS = {
+  'gurvinder':  '#ff9100',
+  'supervisor': '#b388ff',
+  'phase-1':    '#448aff',
+  'phase-2':    '#00e676',
+  'phase-3':    '#ff80ab',
+  'phase-4':    '#18ffff',
+  'phase-5':    '#ea80fc',
+  'phase-6':    '#69f0ae',
+  'git-agent':  '#ffd740',
+};
+
+const PRESENCE_LABELS = {
+  active:  'idle',
+  busy:    'working',
+  typing:  'thinking',
+  session: 'no claude',
+  offline: 'offline',
+};
+
+const color = n => COLORS[n] || '#7a8a9e';
+const esc = t => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
+
+// ═══════════ Phosphor Duotone Avatar Icons ═══════════
+const AVATAR_ICONS = {
+  'crown': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216.71,99.73l-15.6,93.59a8,8,0,0,1-7.89,6.68H62.78a8,8,0,0,1-7.89-6.68L39.29,99.73l.08,0a19.82,19.82,0,0,0,9.22-4.16h0L88,144l32-73.65h0a20,20,0,0,0,15.92,0h0L168,144l39.39-48.48h0a19.82,19.82,0,0,0,9.22,4.16Z" opacity="0.2"/><path d="M248,80a28,28,0,1,0-51.12,15.77l-26.79,33L146,73.4a28,28,0,1,0-36.06,0L85.91,128.74l-26.79-33a28,28,0,1,0-26.6,12L47,194.63A16,16,0,0,0,62.78,208H193.22A16,16,0,0,0,209,194.63l14.47-86.85A28,28,0,0,0,248,80ZM128,40a12,12,0,1,1-12,12A12,12,0,0,1,128,40ZM24,80A12,12,0,1,1,36,92,12,12,0,0,1,24,80ZM193.22,192H62.78L48.86,108.52,81.79,149A8,8,0,0,0,88,152a7.83,7.83,0,0,0,1.08-.07,8,8,0,0,0,6.26-4.74l29.3-67.4a27,27,0,0,0,6.72,0l29.3,67.4a8,8,0,0,0,6.26,4.74A7.83,7.83,0,0,0,168,152a8,8,0,0,0,6.21-3l32.93-40.52ZM220,92a12,12,0,1,1,12-12A12,12,0,0,1,220,92Z"/></svg>',
+  'wrench': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,96a64,64,0,0,1-94.94,56L73,217A24,24,0,0,1,39,183L104,126.94a64,64,0,0,1,80-90.29L144,80l5.66,26.34L176,112l43.35-40A63.8,63.8,0,0,1,224,96Z" opacity="0.2"/><path d="M226.76,69a8,8,0,0,0-12.84-2.88l-40.3,37.19-17.23-3.7-3.7-17.23,37.19-40.3A8,8,0,0,0,187,29.24,72,72,0,0,0,88,96,72.34,72.34,0,0,0,94,124.94L33.79,177c-.15.12-.29.26-.43.39a32,32,0,0,0,45.26,45.26c.13-.13.27-.28.39-.42L131.06,162A72,72,0,0,0,232,96,71.56,71.56,0,0,0,226.76,69ZM160,152a56.14,56.14,0,0,1-27.07-7,8,8,0,0,0-9.92,1.77L67.11,211.51a16,16,0,0,1-22.62-22.62L109.18,133a8,8,0,0,0,1.77-9.93,56,56,0,0,1,58.36-82.31l-31.2,33.81a8,8,0,0,0-1.94,7.1L141.83,108a8,8,0,0,0,6.14,6.14l26.35,5.66a8,8,0,0,0,7.1-1.94l33.81-31.2A56.06,56.06,0,0,1,160,152Z"/></svg>',
+  'magnifying-glass': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M192,112a80,80,0,1,1-80-80A80,80,0,0,1,192,112Z" opacity="0.2"/><path d="M229.66,218.34,179.6,168.28a88.21,88.21,0,1,0-11.32,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>',
+  'shield-check': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216,56v56c0,96-88,120-88,120S40,208,40,112V56a8,8,0,0,1,8-8H208A8,8,0,0,1,216,56Z" opacity="0.2"/><path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm0,72c0,37.07-13.66,67.16-40.6,89.42A129.3,129.3,0,0,1,128,223.62a128.25,128.25,0,0,1-38.92-21.81C61.82,179.51,48,149.3,48,112l0-56,160,0ZM82.34,141.66a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32l-56,56a8,8,0,0,1-11.32,0Z"/></svg>',
+  'git-branch': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,64a24,24,0,1,1-24-24A24,24,0,0,1,224,64Z" opacity="0.2"/><path d="M232,64a32,32,0,1,0-40,31v17a8,8,0,0,1-8,8H96a23.84,23.84,0,0,0-8,1.38V95a32,32,0,1,0-16,0v66a32,32,0,1,0,16,0V144a8,8,0,0,1,8-8h88a24,24,0,0,0,24-24V95A32.06,32.06,0,0,0,232,64ZM64,64A16,16,0,1,1,80,80,16,16,0,0,1,64,64ZM96,192a16,16,0,1,1-16-16A16,16,0,0,1,96,192ZM200,80a16,16,0,1,1,16-16A16,16,0,0,1,200,80Z"/></svg>',
+  'notebook': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M80,40V216H48a8,8,0,0,1-8-8V48a8,8,0,0,1,8-8Z" opacity="0.2"/><path d="M184,112a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h64A8,8,0,0,1,184,112Zm-8,24H112a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm48-88V208a16,16,0,0,1-16,16H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32H208A16,16,0,0,1,224,48ZM48,208H72V48H48Zm160,0V48H88V208H208Z"/></svg>',
+  'terminal': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216,80V192H40V64H200A16,16,0,0,1,216,80Z" opacity="0.2"/><path d="M117.31,134l-72,64a8,8,0,1,1-10.63-12L100,128,34.69,70A8,8,0,1,1,45.32,58l72,64a8,8,0,0,1,0,12ZM216,184H120a8,8,0,0,0,0,16h96a8,8,0,0,0,0-16Z"/></svg>',
+  'robot': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M200,56H56A24,24,0,0,0,32,80V192a24,24,0,0,0,24,24H200a24,24,0,0,0,24-24V80A24,24,0,0,0,200,56ZM164,184H92a20,20,0,0,1,0-40h72a20,20,0,0,1,0,40Z" opacity="0.2"/><path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Zm4,28H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24Z"/></svg>',
+  'lightning': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M96,240l16-80L48,136,160,16,144,96l64,24Z" opacity="0.2"/><path d="M215.79,118.17a8,8,0,0,0-5-5.66L153.18,90.9l14.66-73.33a8,8,0,0,0-13.69-7l-112,120a8,8,0,0,0,3,13l57.63,21.61L88.16,238.43a8,8,0,0,0,13.69,7l112-120A8,8,0,0,0,215.79,118.17ZM109.37,214l10.47-52.38a8,8,0,0,0-5-9.06L62,132.71l84.62-90.66L136.16,94.43a8,8,0,0,0,5,9.06l52.8,19.8Z"/></svg>',
+  'brain': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M240,124a48,48,0,0,1-32,45.27h0V176a40,40,0,0,1-80,0,40,40,0,0,1-80,0v-6.73h0a48,48,0,0,1,0-90.54V72a40,40,0,0,1,80,0,40,40,0,0,1,80,0v6.73A48,48,0,0,1,240,124Z" opacity="0.2"/><path d="M248,124a56.11,56.11,0,0,0-32-50.61V72a48,48,0,0,0-88-26.49A48,48,0,0,0,40,72v1.39a56,56,0,0,0,0,101.2V176a48,48,0,0,0,88,26.49A48,48,0,0,0,216,176v-1.41A56.09,56.09,0,0,0,248,124ZM88,208a32,32,0,0,1-31.81-28.56A55.87,55.87,0,0,0,64,180h8a8,8,0,0,0,0-16H64A40,40,0,0,1,50.67,86.27,8,8,0,0,0,56,78.73V72a32,32,0,0,1,64,0v68.26A47.8,47.8,0,0,0,88,128a8,8,0,0,0,0,16,32,32,0,0,1,0,64Zm104-44h-8a8,8,0,0,0,0,16h8a55.87,55.87,0,0,0,7.81-.56A32,32,0,1,1,168,144a8,8,0,0,0,0-16,47.8,47.8,0,0,0-32,12.26V72a32,32,0,0,1,64,0v6.73a8,8,0,0,0,5.33,7.54A40,40,0,0,1,192,164Zm16-52a8,8,0,0,1-8,8h-4a36,36,0,0,1-36-36V80a8,8,0,0,1,16,0v4a20,20,0,0,0,20,20h4A8,8,0,0,1,208,112ZM60,120H56a8,8,0,0,1,0-16h4A20,20,0,0,0,80,84V80a8,8,0,0,1,16,0v4A36,36,0,0,1,60,120Z"/></svg>',
+  'bug': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M208,128v16a80,80,0,0,1-160,0V128Z" opacity="0.2"/><path d="M144,92a12,12,0,1,1,12,12A12,12,0,0,1,144,92ZM100,80a12,12,0,1,0,12,12A12,12,0,0,0,100,80Zm116,64A87.76,87.76,0,0,1,213,167l22.24,9.72A8,8,0,0,1,232,192a7.89,7.89,0,0,1-3.2-.67L207.38,182a88,88,0,0,1-158.76,0L27.2,191.33A7.89,7.89,0,0,1,24,192a8,8,0,0,1-3.2-15.33L43,167A87.76,87.76,0,0,1,40,144v-8H16a8,8,0,0,1,0-16H40v-8a87.76,87.76,0,0,1,3-23L20.8,79.33a8,8,0,1,1,6.4-14.66L48.62,74a88,88,0,0,1,158.76,0l21.42-9.36a8,8,0,0,1,6.4,14.66L213,89.05a87.76,87.76,0,0,1,3,23v8h24a8,8,0,0,1,0,16H216ZM56,120H200v-8a72,72,0,0,0-144,0Zm64,95.54V136H56v8A72.08,72.08,0,0,0,120,215.54ZM200,144v-8H136v79.54A72.08,72.08,0,0,0,200,144Z"/></svg>',
+  'rocket': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M94.81,192,65.36,214.24a8,8,0,0,1-12.81-4.51L40.19,154.1a8,8,0,0,1,1.66-6.86l30.31-36.33C71,134.25,76.7,161.43,94.81,192Zm119.34-44.76-30.31-36.33c1.21,23.34-4.54,50.52-22.65,81.09l29.45,22.24a8,8,0,0,0,12.81-4.51l12.36-55.63A8,8,0,0,0,214.15,147.24Z" opacity="0.2"/><path d="M152,224a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h32A8,8,0,0,1,152,224ZM128,112a12,12,0,1,0-12-12A12,12,0,0,0,128,112Zm95.62,43.83-12.36,55.63a16,16,0,0,1-25.51,9.11L158.51,200h-61L70.25,220.57a16,16,0,0,1-25.51-9.11L32.38,155.83a16.09,16.09,0,0,1,3.32-13.71l28.56-34.26a123.07,123.07,0,0,1,8.57-36.67c12.9-32.34,36-52.63,45.37-59.85a16,16,0,0,1,19.6,0c9.34,7.22,32.47,27.51,45.37,59.85a123.07,123.07,0,0,1,8.57,36.67l28.56,34.26A16.09,16.09,0,0,1,223.62,155.83ZM99.43,184h57.14c21.12-37.54,25.07-73.48,11.74-106.88C156.55,47.64,134.49,29,128,24c-6.51,5-28.57,23.64-40.33,53.12C74.36,110.52,78.31,146.46,99.43,184Zm-15,5.85Q68.28,160.5,64.83,132.16L48,152.36,60.36,208l.18-.13ZM208,152.36l-16.83-20.2q-3.42,28.28-19.56,57.69l23.85,18,.18.13Z"/></svg>',
+  'lock': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216,96V208a8,8,0,0,1-8,8H48a8,8,0,0,1-8-8V96a8,8,0,0,1,8-8H208A8,8,0,0,1,216,96Z" opacity="0.2"/><path d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Zm-68-56a12,12,0,1,1-12-12A12,12,0,0,1,140,152Z"/></svg>',
+  'database': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216,80c0,26.51-39.4,48-88,48S40,106.51,40,80s39.4-48,88-48S216,53.49,216,80Z" opacity="0.2"/><path d="M128,24C74.17,24,32,48.6,32,80v96c0,31.4,42.17,56,96,56s96-24.6,96-56V80C224,48.6,181.83,24,128,24Zm80,104c0,9.62-7.88,19.43-21.61,26.92C170.93,163.35,150.19,168,128,168s-42.93-4.65-58.39-13.08C55.88,147.43,48,137.62,48,128V111.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64ZM69.61,53.08C85.07,44.65,105.81,40,128,40s42.93,4.65,58.39,13.08C200.12,60.57,208,70.38,208,80s-7.88,19.43-21.61,26.92C170.93,115.35,150.19,120,128,120s-42.93-4.65-58.39-13.08C55.88,99.43,48,89.62,48,80S55.88,60.57,69.61,53.08ZM186.39,202.92C170.93,211.35,150.19,216,128,216s-42.93-4.65-58.39-13.08C55.88,195.43,48,185.62,48,176V159.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64V176C208,185.62,200.12,195.43,186.39,202.92Z"/></svg>',
+  'globe': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a96,96,0,1,1-96-96A96,96,0,0,1,224,128Z" opacity="0.2"/><path d="M128,24h0A104,104,0,1,0,232,128,104.12,104.12,0,0,0,128,24Zm88,104a87.61,87.61,0,0,1-3.33,24H174.16a157.44,157.44,0,0,0,0-48h38.51A87.61,87.61,0,0,1,216,128ZM102,168H154a115.11,115.11,0,0,1-26,45A115.27,115.27,0,0,1,102,168Zm-3.9-16a140.84,140.84,0,0,1,0-48h59.88a140.84,140.84,0,0,1,0,48ZM40,128a87.61,87.61,0,0,1,3.33-24H81.84a157.44,157.44,0,0,0,0,48H43.33A87.61,87.61,0,0,1,40,128ZM154,88H102a115.11,115.11,0,0,1,26-45A115.27,115.27,0,0,1,154,88Zm52.33,0H170.71a135.28,135.28,0,0,0-22.3-45.6A88.29,88.29,0,0,1,206.37,88ZM107.59,42.4A135.28,135.28,0,0,0,85.29,88H49.63A88.29,88.29,0,0,1,107.59,42.4ZM49.63,168H85.29a135.28,135.28,0,0,0,22.3,45.6A88.29,88.29,0,0,1,49.63,168Zm98.78,45.6a135.28,135.28,0,0,0,22.3-45.6h35.66A88.29,88.29,0,0,1,148.41,213.6Z"/></svg>',
+  'megaphone': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M240,120a40,40,0,0,1-40,40H160V80h40A40,40,0,0,1,240,120Z" opacity="0.2"/><path d="M248,120a48.05,48.05,0,0,0-48-48H160.2c-2.91-.17-53.62-3.74-101.91-44.24A16,16,0,0,0,32,40V200a16,16,0,0,0,26.29,12.25c37.77-31.68,77-40.76,93.71-43.3v31.72A16,16,0,0,0,159.12,214l11,7.33A16,16,0,0,0,194.5,212l11.77-44.36A48.07,48.07,0,0,0,248,120ZM48,199.93V40h0c42.81,35.91,86.63,45,104,47.24v65.48C134.65,155,90.84,164.07,48,199.93Zm131,8,0,.11-11-7.33V168h21.6ZM200,152H168V88h32a32,32,0,1,1,0,64Z"/></svg>',
+  'eye': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M128,56C48,56,16,128,16,128s32,72,112,72,112-72,112-72S208,56,128,56Zm0,112a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></svg>',
+  'palette': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,127.17a96.48,96.48,0,0,1-2.39,22.18A24,24,0,0,1,198.21,168H152a24,24,0,0,0-24,24,24,24,0,0,1-32,22.61C58.73,201.44,32,169.81,32,128a96,96,0,0,1,95-96C179.84,31.47,223.55,74.35,224,127.17Z" opacity="0.2"/><path d="M200.77,53.89A103.27,103.27,0,0,0,128,24h-1.07A104,104,0,0,0,24,128c0,43,26.58,79.06,69.36,94.17A32,32,0,0,0,136,192a16,16,0,0,1,16-16h46.21a31.81,31.81,0,0,0,31.2-24.88,104.43,104.43,0,0,0,2.59-24A103.28,103.28,0,0,0,200.77,53.89Zm13,93.71A15.89,15.89,0,0,1,198.21,160H152a32,32,0,0,0-32,32,16,16,0,0,1-21.31,15.07C62.49,194.3,40,164,40,128a88,88,0,0,1,87.09-88h.9a88.35,88.35,0,0,1,88,87.25A88.86,88.86,0,0,1,213.81,147.6ZM140,76a12,12,0,1,1-12-12A12,12,0,0,1,140,76ZM96,100A12,12,0,1,1,84,88,12,12,0,0,1,96,100Zm0,56a12,12,0,1,1-12-12A12,12,0,0,1,96,156Zm88-56a12,12,0,1,1-12-12A12,12,0,0,1,184,100Z"/></svg>',
+  'book': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32V192H72a24,24,0,0,0-24,24V56A24,24,0,0,1,72,32Z" opacity="0.2"/><path d="M208,24H72A32,32,0,0,0,40,56V224a8,8,0,0,0,8,8H192a8,8,0,0,0,0-16H56a16,16,0,0,1,16-16H208a8,8,0,0,0,8-8V32A8,8,0,0,0,208,24Zm-8,160H72a31.82,31.82,0,0,0-16,4.29V56A16,16,0,0,1,72,40H200Z"/></svg>',
+  'users': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M136,108A52,52,0,1,1,84,56,52,52,0,0,1,136,108Z" opacity="0.2"/><path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.14,98.7a8,8,0,0,1-11.07-2.33A79.83,79.83,0,0,0,172,168a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.14,206.7Z"/></svg>',
+  'heartbeat': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M232,102c0,66-104,122-104,122S24,168,24,102A54,54,0,0,1,78,48c22.59,0,41.94,12.31,50,32,8.06-19.69,27.41-32,50-32A54,54,0,0,1,232,102Z" opacity="0.2"/><path d="M72,144H32a8,8,0,0,1,0-16H67.72l13.62-20.44a8,8,0,0,1,13.32,0l25.34,38,9.34-14A8,8,0,0,1,136,128h24a8,8,0,0,1,0,16H140.28l-13.62,20.44a8,8,0,0,1-13.32,0L88,126.42l-9.34,14A8,8,0,0,1,72,144ZM178,40c-20.65,0-38.73,8.88-50,23.89C116.73,48.88,98.65,40,78,40a62.07,62.07,0,0,0-62,62c0,.75,0,1.5,0,2.25a8,8,0,1,0,16-.5c0-.58,0-1.17,0-1.75A46.06,46.06,0,0,1,78,56c19.45,0,35.78,10.36,42.6,27a8,8,0,0,0,14.8,0c6.82-16.67,23.15-27,42.6-27a46.06,46.06,0,0,1,46,46c0,53.61-77.76,102.15-96,112.8-10.83-6.31-42.63-26-66.68-52.21a8,8,0,1,0-11.8,10.82c31.17,34,72.93,56.68,74.69,57.63a8,8,0,0,0,7.58,0C136.21,228.66,240,172,240,102A62.07,62.07,0,0,0,178,40Z"/></svg>',
+  'gauge': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M232,152v24a8,8,0,0,1-8,8H32a8,8,0,0,1-8-8V153.13C24,95.65,70.15,48.2,127.63,48A104,104,0,0,1,232,152Z" opacity="0.2"/><path d="M207.06,72.67A111.24,111.24,0,0,0,128,40h-.4C66.07,40.21,16,91,16,153.13V176a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V152A111.25,111.25,0,0,0,207.06,72.67ZM224,176H119.71l54.76-75.3a8,8,0,0,0-12.94-9.42L99.92,176H32V153.13c0-3.08.15-6.12.43-9.13H56a8,8,0,0,0,0-16H35.27c10.32-38.86,44-68.24,84.73-71.66V80a8,8,0,0,0,16,0V56.33A96.14,96.14,0,0,1,221,128H200a8,8,0,0,0,0,16h23.67c.21,2.65.33,5.31.33,8Z"/></svg>',
+  'code': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M240,128l-48,40H64L16,128,64,88H192Z" opacity="0.2"/><path d="M69.12,94.15,28.5,128l40.62,33.85a8,8,0,1,1-10.24,12.29l-48-40a8,8,0,0,1,0-12.29l48-40a8,8,0,0,1,10.24,12.3Zm176,27.7-48-40a8,8,0,1,0-10.24,12.3L227.5,128l-40.62,33.85a8,8,0,1,0,10.24,12.29l48-40a8,8,0,0,0,0-12.29ZM162.73,32.48a8,8,0,0,0-10.25,4.79l-64,176a8,8,0,0,0,4.79,10.26A8.14,8.14,0,0,0,96,224a8,8,0,0,0,7.52-5.27l64-176A8,8,0,0,0,162.73,32.48Z"/></svg>',
+  'clipboard': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M208,48V216a8,8,0,0,1-8,8H56a8,8,0,0,1-8-8V48a8,8,0,0,1,8-8H96a39.83,39.83,0,0,0-8,24v8h80V64a39.83,39.83,0,0,0-8-24h40A8,8,0,0,1,208,48Z" opacity="0.2"/><path d="M200,32H163.74a47.92,47.92,0,0,0-71.48,0H56A16,16,0,0,0,40,48V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V48A16,16,0,0,0,200,32Zm-72,0a32,32,0,0,1,32,32H96A32,32,0,0,1,128,32Zm72,184H56V48H82.75A47.93,47.93,0,0,0,80,64v8a8,8,0,0,0,8,8h80a8,8,0,0,0,8-8V64a47.93,47.93,0,0,0-2.75-16H200Z"/></svg>',
+  'gear': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M207.86,123.18l16.78-21a99.14,99.14,0,0,0-10.07-24.29l-26.7-3a81,81,0,0,0-6.81-6.81l-3-26.71a99.43,99.43,0,0,0-24.3-10l-21,16.77a81.59,81.59,0,0,0-9.64,0l-21-16.78A99.14,99.14,0,0,0,77.91,41.43l-3,26.7a81,81,0,0,0-6.81,6.81l-26.71,3a99.43,99.43,0,0,0-10,24.3l16.77,21a81.59,81.59,0,0,0,0,9.64l-16.78,21a99.14,99.14,0,0,0,10.07,24.29l26.7,3a81,81,0,0,0,6.81,6.81l3,26.71a99.43,99.43,0,0,0,24.3,10l21-16.77a81.59,81.59,0,0,0,9.64,0l21,16.78a99.14,99.14,0,0,0,24.29-10.07l3-26.7a81,81,0,0,0,6.81-6.81l26.71-3a99.43,99.43,0,0,0,10-24.3l-16.77-21A81.59,81.59,0,0,0,207.86,123.18ZM128,168a40,40,0,1,1,40-40A40,40,0,0,1,128,168Z" opacity="0.2"/><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.6,107.6,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.29,107.29,0,0,0-26.25-10.86,8,8,0,0,0-7.06,1.48L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.6,107.6,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L187,173.11a8,8,0,0,0-5.1,2.64,74.11,74.11,0,0,1-6.14,6.14,8,8,0,0,0-2.64,5.1l-2.51,22.58a91.32,91.32,0,0,1-15,6.23l-17.74-14.19a8,8,0,0,0-5-1.75h-.48a73.93,73.93,0,0,1-8.68,0,8.06,8.06,0,0,0-5.48,1.74L100.45,215.8a91.57,91.57,0,0,1-15-6.23L82.89,187a8,8,0,0,0-2.64-5.1,74.11,74.11,0,0,1-6.14-6.14,8,8,0,0,0-5.1-2.64L46.43,170.6a91.32,91.32,0,0,1-6.23-15l14.19-17.74a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L40.2,100.45a91.57,91.57,0,0,1,6.23-15L69,82.89a8,8,0,0,0,5.1-2.64,74.11,74.11,0,0,1,6.14-6.14A8,8,0,0,0,82.89,69L85.4,46.43a91.32,91.32,0,0,1,15-6.23l17.74,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8.06,8.06,0,0,0,5.48-1.74L155.55,40.2a91.57,91.57,0,0,1,15,6.23L173.11,69a8,8,0,0,0,2.64,5.1,74.11,74.11,0,0,1,6.14,6.14,8,8,0,0,0,5.1,2.64l22.58,2.51a91.32,91.32,0,0,1,6.23,15l-14.19,17.74A8,8,0,0,0,199.87,123.66Z"/></svg>',
+};
+
+const ROLE_ICON_MAP = {
+  'supervisor': 'crown', 'lead': 'crown', 'director': 'crown',
+  'engineer': 'wrench', 'builder': 'wrench', 'developer': 'wrench', 'coder': 'code', 'dev': 'code',
+  'scout': 'magnifying-glass', 'researcher': 'magnifying-glass', 'investigator': 'magnifying-glass',
+  'qa': 'shield-check', 'q-a': 'shield-check', 'quality': 'shield-check', 'tester': 'shield-check', 'validator': 'shield-check',
+  'git': 'git-branch', 'git-agent': 'git-branch', 'vcs': 'git-branch',
+  'chronicler': 'notebook', 'observer': 'notebook', 'logger': 'notebook',
+  'gurvinder': 'terminal', 'operator': 'terminal', 'admin': 'terminal', 'root': 'terminal',
+};
+
+const ROLE_COLOR_MAP = {
+  'supervisor': '#b388ff', 'lead': '#b388ff', 'director': '#b388ff',
+  'engineer': '#448aff', 'builder': '#448aff', 'developer': '#448aff', 'coder': '#448aff', 'dev': '#448aff',
+  'scout': '#18ffff', 'researcher': '#18ffff', 'investigator': '#18ffff',
+  'qa': '#ff5252', 'q-a': '#ff5252', 'quality': '#ff5252', 'tester': '#ff5252', 'validator': '#ff5252',
+  'git': '#ffd740', 'git-agent': '#ffd740', 'vcs': '#ffd740',
+  'chronicler': '#ff80ab', 'observer': '#ff80ab', 'logger': '#ff80ab',
+  'gurvinder': '#ff9100', 'operator': '#ff9100',
+};
+
+const EXTRA_COLOR_SWATCHES = ['#64ffda', '#b9f6ca', '#ff6e40', '#8c9eff', '#ffcc80', '#84ffff', '#f48fb1', '#ce93d8'];
+
+function resolveAgentIcon(agent) {
+  if (agent.icon && AVATAR_ICONS[agent.icon]) return agent.icon;
+  const name = (agent.name || '').toLowerCase();
+  for (const [kw, icon] of Object.entries(ROLE_ICON_MAP)) {
+    if (name.includes(kw)) return icon;
+  }
+  return 'robot';
+}
+
+function resolveAgentColor(agent) {
+  if (agent.color) return agent.color;
+  const name = (agent.name || '').toLowerCase();
+  for (const [kw, c] of Object.entries(ROLE_COLOR_MAP)) {
+    if (name.includes(kw)) return c;
+  }
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+  return EXTRA_COLOR_SWATCHES[Math.abs(hash) % EXTRA_COLOR_SWATCHES.length];
+}
+
+function renderAvatarCircle(agent, size) {
+  size = size || 40;
+  const iconSize = Math.round(size * 0.55);
+  const iconKey = resolveAgentIcon(agent);
+  const agentColor = resolveAgentColor(agent);
+  const svgHtml = AVATAR_ICONS[iconKey] || AVATAR_ICONS['robot'];
+  return `<div class="agent-avatar" style="width:${size}px;height:${size}px;min-width:${size}px;background:${agentColor}"><div class="agent-avatar-icon" style="width:${iconSize}px;height:${iconSize}px">${svgHtml}</div></div>`;
+}
+
+
+
+let ws = null;
+let agentData = {};
+let agentRoster = [];
+const agentHookEvents = {};  // { agentName: { tool: { exit_code, summary, timestamp } } }
+
+const $ = id => document.getElementById(id);
+const $msgs = $('messages'), $input = $('msgInput'), $send = $('sendBtn');
+const $target = $('targetSel'), $conn = $('connBadge'), $agents = $('agentList'), $count = $('agentCount');
+
+// ═══════════ WebSocket ═══════════
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+  ws.onopen = () => { $conn.textContent = 'live'; $conn.className = 'conn on'; $send.disabled = false; };
+  ws.onclose = () => { $conn.textContent = 'offline'; $conn.className = 'conn off'; $send.disabled = true; setTimeout(connect, 2000); };
+  ws.onerror = () => ws.close();
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'history') { $msgs.innerHTML = ''; lastSender = null; lastTimestamp = null; d.messages.forEach(renderMsg); scrollForce(); }
+    else if (d.type === 'message') { renderMsg(d.message); scrollEnd(); }
+    else if (d.type === 'agent_status') {
+      if (d.server) {
+        const srvUp = $('srvUptime');
+        const srvLA = $('srvLA');
+        if (srvUp) srvUp.textContent = d.server.uptime || '--';
+        if (srvLA) {
+          srvLA.textContent = d.server.launchagent ? 'active' : 'not installed';
+          srvLA.className = d.server.launchagent ? 'server-la-active' : 'server-la-inactive';
+        }
+      }
+      const incoming = d.agents || {};
+      // Preserve dynamic flag from previous data
+      for (const name in incoming) {
+        if (agentData[name] && agentData[name].dynamic) incoming[name].dynamic = true;
+      }
+      agentData = incoming;
+      // Update COLORS map from agent identity system
+      agentRoster.forEach(a => {
+        const c = (typeof resolveAgentColor === 'function') ? resolveAgentColor(a) : null;
+        if (c) COLORS[a.name] = c;
+      });
+      renderAgents();
+    }
+    else if (d.type === 'membership') { if (agentData[d.agent]) agentData[d.agent].in_room = d.in_room; renderAgents(); }
+    else if (d.type === 'agent_created') {
+      const a = d.agent;
+      if (!agentRoster.find(x => x.name === a.name)) {
+        agentRoster.push({ name: a.name, role: a.role, dynamic: true });
+      }
+      agentData[a.name] = { presence: a.presence || 'offline', activity: a.activity || null, in_room: a.in_room !== false, dynamic: true };
+      renderAgents();
+    }
+    else if (d.type === 'agent_removed') {
+      agentRoster = agentRoster.filter(x => x.name !== d.agent);
+      delete agentData[d.agent];
+      renderAgents();
+    }
+    else if (d.type === 'hook_event') {
+      if (!agentHookEvents[d.agent]) agentHookEvents[d.agent] = {};
+      agentHookEvents[d.agent][d.tool] = { exit_code: d.exit_code, summary: d.summary, timestamp: d.timestamp };
+      updateAgentGateStatus(d.agent);
+    }
+  };
+}
+
+// ═══════════ Messages ═══════════
+let lastSender = null;
+let lastTimestamp = null;
+
+function formatTimeDivider(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.floor((today - msgDay) / 86400000);
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function formatTimeShort(dateStr) {
+  const d = new Date(dateStr);
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
+}
+
+function shouldShowTimeDivider(prevTs, currTs) {
+  if (!prevTs || !currTs) return false;
+  const prev = new Date(prevTs);
+  const curr = new Date(currTs);
+  if (prev.toDateString() !== curr.toDateString()) return true;
+  return (curr - prev) > 300000;
+}
+
+function isSameGroup(prevSender, prevTs, currSender, currTs) {
+  if (prevSender !== currSender) return false;
+  if (!prevTs || !currTs) return false;
+  return (new Date(currTs) - new Date(prevTs)) < 20000;
+}
+
+function renderMsg(m) {
+  const isSystem = m.type === 'system';
+  const isDirect = !isSystem && m.target !== 'all';
+  const isUser = !isSystem && m.sender === 'gurvinder';
+  const isMobile = window.innerWidth < 768;
+
+  // Time divider check (mobile only)
+  if (isMobile && !isSystem && m.timestamp && shouldShowTimeDivider(lastTimestamp, m.timestamp)) {
+    const divider = document.createElement('div');
+    divider.className = 'time-divider';
+    const dividerText = formatTimeDivider(m.timestamp);
+    const timeText = formatTimeShort(m.timestamp);
+    divider.textContent = dividerText === 'Today' ? timeText : `${dividerText} ${timeText}`;
+    $msgs.appendChild(divider);
+  }
+
+  const el = document.createElement('div');
+
+  if (isSystem) {
+    el.className = 'msg system';
+    el.textContent = m.content;
+    lastSender = null;
+    lastTimestamp = m.timestamp || null;
+    $msgs.appendChild(el);
+    return;
+  }
+
+  // Grouping logic
+  const grouped = isSameGroup(lastSender, lastTimestamp, m.sender, m.timestamp);
+
+  // Build class list
+  let cls = 'msg';
+  if (isUser && isMobile) cls += ' msg-user';
+  if (isDirect) cls += ' direct';
+  if (grouped) {
+    cls += ' grouped';
+    const prev = $msgs.lastElementChild;
+    if (prev && prev.classList.contains('standalone')) {
+      prev.classList.remove('standalone');
+      prev.classList.add('group-start');
+    }
+  } else {
+    cls += ' standalone';
+  }
+  el.className = cls;
+
+  // Border color for agent messages
+  if (!isUser || !isMobile) {
+    el.style.borderLeftColor = color(m.sender);
+  }
+
+  // Timestamp
+  const ts = m.timestamp ? m.timestamp.slice(11, 19) : '';
+  const tag = isDirect ? `<span class="msg-tag">@${esc(m.target)}</span>` : '';
+
+  // Build inner HTML
+  let html = '';
+  html += `<div class="msg-head">`;
+  html += `<span class="msg-sender" style="color:${color(m.sender)}">${esc(m.sender)}</span>`;
+  html += tag;
+  html += `<span class="msg-time">${ts}</span>`;
+  html += `</div>`;
+  html += `<div class="msg-body">${esc(m.content)}</div>`;
+
+  // User messages on mobile get timestamp below the bubble
+  if (isUser && isMobile) {
+    const shortTime = m.timestamp ? formatTimeShort(m.timestamp) : ts;
+    html += `<span class="msg-time-below">${shortTime}</span>`;
+  }
+
+  el.innerHTML = html;
+
+  lastSender = m.sender;
+  lastTimestamp = m.timestamp || null;
+
+  $msgs.appendChild(el);
+
+  // Image preview for uploaded files
+  if (m.content && m.content.includes('[uploaded:')) {
+    const match = m.content.match(/\[uploaded:\s*([^\]]+)\]/);
+    if (match) {
+      const filePath = match[1].trim();
+      const ext = filePath.split('.').pop().toLowerCase();
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+        const img = document.createElement('img');
+        img.src = `/uploads/${filePath.replace('docs/warroom-uploads/', '')}`;
+        img.style.cssText = 'max-width:100%;max-height:300px;border-radius:8px;margin-top:8px;cursor:pointer;display:block';
+        img.onclick = () => window.open(img.src, '_blank');
+        const body = el.querySelector('.msg-body');
+        if (body) body.appendChild(img);
+      }
+    }
+  }
+}
+
+// ═══════════ Agent Sidebar ═══════════
+const ROLE_MAP = {
+  'supervisor': 'Coordinator',
+  'scout': 'Research',
+  'engineer-1': 'Engineer',
+  'engineer-2': 'Engineer',
+  'qa': 'Quality Gate',
+  'git-agent': 'Git Ops',
+  'chronicler': 'Observer',
+};
+
+function shortRole(role, name) {
+  if (!role) return '';
+  if (ROLE_MAP[name]) return ROLE_MAP[name];
+  return role.length > 24 ? role.slice(0, 24) + '...' : role;
+}
+
+function renderAgents() {
+  $agents.innerHTML = '';
+  let inCount = 0;
+
+  // Gurvinder — operator card, visually distinct
+  const gCard = document.createElement('div');
+  gCard.className = 'ac ac-operator';
+  gCard.innerHTML = `
+    <div class="ac-row1">
+      ${renderAvatarCircle({name: 'gurvinder'}, 28)}
+      <span class="dot active"></span>
+      <span class="ac-name" style="color:${resolveAgentColor({name: 'gurvinder'})}">gurvinder</span>
+    </div>
+    <div class="ac-row2">
+      <span class="ac-role">Operator</span>
+    </div>
+  `;
+
+  // Card-level avatar (visible on mobile, hidden on desktop via CSS)
+  gCard.insertAdjacentHTML('afterbegin', renderAvatarCircle({name: 'gurvinder'}, 40));
+
+  // Mobile card body (visible on mobile, hidden on desktop)
+  const gMobileHtml = `
+    <div class="mobile-card-body">
+      <div class="mobile-card-info">
+        <div class="mobile-card-name" style="color:${resolveAgentColor({name: 'gurvinder'})}">gurvinder</div>
+        <div class="mobile-card-role">Operator</div>
+      </div>
+      <div class="mobile-card-status">
+        <div class="mobile-status-row">
+          <span class="mobile-status-dot active"></span>
+          <span class="mobile-status-word active">online</span>
+        </div>
+      </div>
+    </div>
+  `;
+  gCard.insertAdjacentHTML('beforeend', gMobileHtml);
+
+  gCard.onclick = () => { $target.value = 'all'; $input.focus(); };
+  $agents.appendChild(gCard);
+  inCount++;
+
+  // Separator between operator and agents
+  const sep = document.createElement('div');
+  sep.className = 'ac-sep';
+  $agents.appendChild(sep);
+
+  // Split agents into active and de-boarded
+  const activeAgents = [];
+  const deboardedAgents = [];
+  agentRoster.forEach(a => {
+    const d = agentData[a.name] || {};
+    const inRoom = d.in_room !== undefined ? d.in_room : true;
+    if (inRoom) activeAgents.push(a);
+    else deboardedAgents.push(a);
+  });
+
+  // ── ACTIVE AGENTS ──
+  activeAgents.forEach(a => {
+    const d = agentData[a.name] || {};
+    const presence = d.presence || 'offline';
+    const activity = d.activity || null;
+    const role = shortRole(a.role, a.name);
+    const task = d.task || null;
+    const progress = d.progress != null ? d.progress : null;
+    const eta = d.eta || null;
+    const blockedBy = d.blocked_by || null;
+    const blockedReason = d.blocked_reason || null;
+    const stalled = d.stalled || false;
+    const stalledMin = d.stalled_minutes || 0;
+    const lastCommit = d.last_commit || null;
+    const isDynamic = a.dynamic || d.dynamic || false;
+
+    const sessionAlive = d.session_alive !== false;
+    const sessionDead = !sessionAlive && presence === 'offline';
+
+    if (presence !== 'offline') inCount++;
+
+    let cardClass = 'ac';
+    if (sessionDead) cardClass = 'ac session-dead';
+    else if (blockedBy) cardClass = 'ac blocked-card';
+    else if (stalled) cardClass = 'ac stalled';
+
+    const card = document.createElement('div');
+    card.className = cardClass;
+
+    let dotClass = blockedBy ? 'offline' : (stalled ? 'busy' : presence);
+
+    let stBadge = '';
+    if (blockedBy) stBadge = '<span class="ac-status st-deboarded">blocked</span>';
+    else if (stalled) stBadge = `<span class="ac-status st-busy">stalled ${stalledMin}m</span>`;
+    else if (presence === 'busy') stBadge = '<span class="ac-status st-busy">working</span>';
+    else if (presence === 'typing') stBadge = '<span class="ac-status st-typing">thinking</span>';
+    else if (presence === 'offline') stBadge = '<span class="ac-status st-offline">offline</span>';
+
+    let btns = '';
+    if (sessionDead) {
+      btns = `<button class="abtn abtn-recover" data-action="recover" data-agent="${a.name}">Recover</button>`;
+    } else {
+      btns = `
+        <button class="abtn abtn-cli" data-action="attach" data-agent="${a.name}" title="Open CLI in Terminal">cli</button>
+        <button class="abtn abtn-msg" data-action="msg" data-agent="${a.name}" title="Direct message">@</button>
+        <button class="abtn abtn-off" data-action="deboard" data-agent="${a.name}" title="De-board from room">x</button>
+      `;
+    }
+
+    let actLine = '';
+    if (task) actLine = `<div class="ac-activity">${esc(task)}</div>`;
+    else if (activity) actLine = `<div class="ac-activity ${presence === 'typing' ? 'tp' : ''}">${esc(activity)}</div>`;
+
+    let progressHtml = '';
+    if (progress != null) {
+      const etaText = eta ? ` · ~${esc(eta)}` : '';
+      progressHtml = `<div class="ac-progress"><div class="ac-progress-bar"><div class="ac-progress-fill" style="width:${progress}%"></div></div><span class="ac-progress-text">${progress}%${etaText}</span></div>`;
+    }
+
+    let blockerHtml = '';
+    if (blockedBy) blockerHtml = `<div class="ac-blocker">⚠ blocked: ${esc(blockedReason || blockedBy)}</div>`;
+
+    let stalledHtml = '';
+    if (stalled && !blockedBy) stalledHtml = `<div class="ac-stalled-text">${stalledMin}m+ on same file</div>`;
+
+    let deadHtml = '';
+    if (sessionDead) deadHtml = '<div class="ac-dead-warning">\u26A0 Session lost \u2014 click Recover to restart</div>';
+
+    let commitHtml = '';
+    if (lastCommit) commitHtml = `<div class="ac-commit">${esc(lastCommit.hash)} ${esc(lastCommit.message)}</div>`;
+
+    const dynBadge = isDynamic ? '<span class="ac-dynamic" title="Dynamic agent">~</span>' : '';
+
+    const agentColor = resolveAgentColor(a);
+    card.innerHTML = `
+      <div class="ac-row1">
+        <span class="ac-drag-handle" title="Drag to reorder">⠿</span>
+        ${renderAvatarCircle(a, 28)}
+        <span class="dot ${dotClass}"></span>
+        <span class="ac-name" style="color:${agentColor}">${a.name}${dynBadge}</span>
+        <div class="ac-actions">${btns}</div>
+      </div>
+      <div class="ac-row2">
+        <span class="ac-role" title="${esc(a.role || '')}">${role}</span>
+        ${stBadge}
+      </div>
+      ${actLine}${progressHtml}${blockerHtml}${stalledHtml}${deadHtml}${commitHtml}
+      <div class="ac-gates"></div>
+    `;
+
+    // Card-level avatar (mobile)
+    card.insertAdjacentHTML('afterbegin', renderAvatarCircle(a, 40));
+
+    // Mobile card body
+    const PRESENCE_LABELS = { active: 'active', busy: 'working', typing: 'thinking', session: 'no claude', offline: 'offline' };
+    const presenceLabel = blockedBy ? 'blocked' : (stalled ? `stalled ${stalledMin}m` : (PRESENCE_LABELS[presence] || presence));
+    const presenceClass = blockedBy ? 'offline' : (stalled ? 'busy' : presence);
+
+    const mobileHtml = `
+      <div class="mobile-card-body">
+        <div class="mobile-card-info">
+          <div class="mobile-card-name" style="color:${agentColor}">${a.name}</div>
+          <div class="mobile-card-role">${role || ''}</div>
+        </div>
+        <div class="mobile-card-status">
+          <div class="mobile-status-row">
+            <span class="mobile-status-dot ${presenceClass}"></span>
+            <span class="mobile-status-word ${presenceClass}">${presenceLabel}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    card.insertAdjacentHTML('beforeend', mobileHtml);
+
+    // Mobile tap handler — open action bottom sheet
+    if (window.innerWidth < 768) {
+      card.onclick = (e) => {
+        if (e.target.closest('.abtn')) return;
+        showBottomSheet(a.name.toUpperCase(), [
+          { icon: SVG_ICONS.chat, label: 'Message', action: 'msg' },
+          { icon: SVG_ICONS.eye, label: 'View Activity', action: 'activity' },
+          { icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>', label: 'Details', action: 'details' },
+        ], (item) => {
+          if (item.action === 'msg') {
+            $target.value = a.name;
+            if ($inputTarget) $inputTarget.textContent = `@${a.name} ▼`;
+            switchTab('chat');
+            $input.focus();
+          } else if (item.action === 'activity') {
+            const actItems = [];
+            actItems.push({ label: `Presence: ${presenceLabel}` });
+            if (activity) actItems.push({ label: `Activity: ${activity}` });
+            if (task) actItems.push({ label: `Task: ${task}` });
+            if (lastCommit) actItems.push({ label: `Commit: ${lastCommit.hash} ${lastCommit.message}` });
+            showBottomSheet('Activity — ' + a.name, actItems, () => {});
+          } else if (item.action === 'details') {
+            const detItems = [];
+            detItems.push({ label: `Role: ${a.role || 'none'}` });
+            if (a.instructions) detItems.push({ label: `Instructions: ${a.instructions}` });
+            detItems.push({ label: `Type: ${a.role_type || a.name}` });
+            showBottomSheet('Details — ' + a.name, detItems, () => {});
+          }
+        });
+      };
+    }
+
+    // Drag handle for reordering
+    card.draggable = true;
+    card.dataset.agentName = a.name;
+
+    card.addEventListener('dragstart', (e) => {
+      // Only allow drag from the handle
+      if (!e.target.closest('.ac-drag-handle') && e.target.closest('.ac')) {
+        // Check if the drag started on the handle
+        const handle = card.querySelector('.ac-drag-handle');
+        const rect = handle.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+          // Not from handle — check if it's a file drop (allow that)
+          if (!e.dataTransfer.types.includes('application/x-warroom-file')) {
+            e.dataTransfer.setData('application/x-warroom-reorder', a.name);
+            card.classList.add('reorder-dragging');
+          }
+          return;
+        }
+      }
+      e.dataTransfer.setData('application/x-warroom-reorder', a.name);
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('reorder-dragging');
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('reorder-dragging');
+      // Clean up all reorder-over indicators
+      document.querySelectorAll('.reorder-over').forEach(el => el.classList.remove('reorder-over'));
+    });
+
+    card.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types.includes('application/x-warroom-reorder')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        card.classList.add('reorder-over');
+      }
+    });
+
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('reorder-over');
+    });
+
+    card.addEventListener('drop', (e) => {
+      card.classList.remove('reorder-over');
+      const draggedName = e.dataTransfer.getData('application/x-warroom-reorder');
+      if (draggedName && draggedName !== a.name) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Reorder agentRoster
+        const fromIdx = agentRoster.findIndex(r => r.name === draggedName);
+        const toIdx = agentRoster.findIndex(r => r.name === a.name);
+        if (fromIdx !== -1 && toIdx !== -1) {
+          const [moved] = agentRoster.splice(fromIdx, 1);
+          agentRoster.splice(toIdx, 0, moved);
+          // Save order to localStorage
+          localStorage.setItem('warroom-agent-order', JSON.stringify(agentRoster.map(r => r.name)));
+          renderAgents();
+        }
+      }
+    });
+
+    card.querySelector('.ac-name').onclick = (e) => { e.stopPropagation(); $target.value = a.name; $input.focus(); };
+    card.querySelectorAll('.abtn[data-action]').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const action = btn.dataset.action;
+        const agent = btn.dataset.agent;
+        if (action === 'attach') fetch(`/api/agents/${agent}/attach`, { method: 'POST' });
+        else if (action === 'deboard') fetch(`/api/agents/${agent}/deboard`, { method: 'POST' });
+        else if (action === 'msg') {
+          $target.value = agent;
+          if ($inputTarget) $inputTarget.textContent = `@${agent} ▼`;
+          $input.focus();
+          if (window.innerWidth < 768) switchTab('chat');
+        }
+        else if (action === 'recover') {
+          btn.textContent = 'Recovering...';
+          btn.disabled = true;
+          fetch(`/api/agents/${agent}/recover`, { method: 'POST' }).then(r => r.json()).then(d => {
+            btn.textContent = d.status === 'recovered' ? 'Recovered!' : 'Failed';
+            if (d.error) alert(d.error);
+          }).catch(() => { btn.textContent = 'Failed'; });
+        }
+      };
+    });
+
+    // Drop zone: file → agent card
+    card.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.types.includes('application/x-warroom-file')) {
+        e.preventDefault();
+        card.classList.add('drop-active');
+      }
+    });
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('drop-active');
+    });
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drop-active');
+      const filePath = e.dataTransfer.getData('application/x-warroom-file');
+      if (filePath) {
+        $target.value = a.name;
+        $input.value = `[file: ${filePath}] `;
+        $input.focus();
+      }
+    });
+
+    $agents.appendChild(card);
+
+    // Restore gate status from tracked events
+    if (agentHookEvents[a.name]) {
+      setTimeout(() => updateAgentGateStatus(a.name), 0);
+    }
+  });
+
+  // ── DE-BOARDED SECTION ──
+  if (deboardedAgents.length > 0) {
+    const deSep = document.createElement('div');
+    deSep.className = 'ac-sep';
+    $agents.appendChild(deSep);
+
+    const deHeader = document.createElement('div');
+    deHeader.className = 'sb-section-head';
+    deHeader.textContent = `De-boarded (${deboardedAgents.length})`;
+    $agents.appendChild(deHeader);
+
+    deboardedAgents.forEach(a => {
+      const role = shortRole(a.role, a.name);
+      const isDynamic = a.dynamic || (agentData[a.name] && agentData[a.name].dynamic) || false;
+      const dynBadge = isDynamic ? '<span class="ac-dynamic" title="Dynamic agent">~</span>' : '';
+
+      const card = document.createElement('div');
+      card.className = 'ac off';
+      card.innerHTML = `
+        <div class="ac-row1">
+          <span class="dot session"></span>
+          <span class="ac-name" style="color:${color(a.name)}">${a.name}${dynBadge}</span>
+          <div class="ac-actions">
+            <button class="abtn abtn-on" data-action="reboard" data-agent="${a.name}" title="Re-join the war room">+ rejoin</button>
+            <button class="abtn abtn-remove" data-action="remove" data-agent="${a.name}" title="Kill session and remove permanently">remove</button>
+          </div>
+        </div>
+        <div class="ac-row2">
+          <span class="ac-role" title="${esc(a.role || '')}">${role}</span>
+          <span class="ac-status st-deboarded">de-boarded</span>
+        </div>
+      `;
+
+      // Card-level avatar + mobile body for de-boarded agents too
+      card.insertAdjacentHTML('afterbegin', renderAvatarCircle(a, 40));
+      const dMobileHtml = `
+        <div class="mobile-card-body">
+          <div class="mobile-card-info">
+            <div class="mobile-card-name" style="color:${resolveAgentColor(a)}">${a.name}</div>
+            <div class="mobile-card-role">${shortRole(a.role, a.name) || 'de-boarded'}</div>
+          </div>
+          <div class="mobile-card-status">
+            <div class="mobile-status-row">
+              <span class="mobile-status-dot offline"></span>
+              <span class="mobile-status-word offline">offline</span>
+            </div>
+          </div>
+        </div>
+      `;
+      card.insertAdjacentHTML('beforeend', dMobileHtml);
+
+      card.querySelectorAll('.abtn[data-action]').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const action = btn.dataset.action;
+          const agent = btn.dataset.agent;
+          if (action === 'reboard') fetch(`/api/agents/${agent}/reboard`, { method: 'POST' });
+          else if (action === 'remove') {
+            if (confirm(`Remove ${agent} permanently? This will kill the tmux session.`)) {
+              fetch(`/api/agents/${agent}/remove`, { method: 'DELETE' }).then(() => {
+                agentRoster = agentRoster.filter(r => r.name !== agent);
+                delete agentData[agent];
+                renderAgents();
+              });
+            }
+          }
+        };
+      });
+
+      $agents.appendChild(card);
+    });
+  }
+
+  // Update count
+  $count.textContent = `${inCount} / ${agentRoster.length + 1}`;
+
+  // Update target dropdown
+  const cur = $target.value;
+  $target.innerHTML = '<option value="all">@all</option>';
+  agentRoster.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.name;
+    opt.textContent = `@${a.name}`;
+    $target.appendChild(opt);
+  });
+  $target.value = cur || 'all';
+}
+
+// ═══════════ Agent Gate Status ═══════════
+function updateAgentGateStatus(agentName) {
+  const card = document.querySelector(`.ac[data-agent-name="${agentName}"]`);
+  if (!card) return;
+
+  const events = agentHookEvents[agentName] || {};
+
+  // Update gate dots
+  let gatesEl = card.querySelector('.ac-gates');
+  if (!gatesEl) {
+    gatesEl = document.createElement('div');
+    gatesEl.className = 'ac-gates';
+    card.appendChild(gatesEl);
+  }
+
+  gatesEl.innerHTML = '';
+  for (const [tool, ev] of Object.entries(events)) {
+    if (!tool) continue;
+    const dot = document.createElement('span');
+    dot.className = 'gate-dot ' + (ev.exit_code === 0 ? 'pass' : 'fail');
+    dot.textContent = '\u25CF ' + tool;
+    dot.title = ev.summary || '';
+    gatesEl.appendChild(dot);
+  }
+
+  // Update last event
+  let lastEl = card.querySelector('.ac-last-event');
+  const allEvents = Object.values(events);
+  if (allEvents.length > 0) {
+    const latest = allEvents[allEvents.length - 1];
+    if (!lastEl) {
+      lastEl = document.createElement('div');
+      lastEl.className = 'ac-last-event';
+      card.appendChild(lastEl);
+    }
+    lastEl.textContent = 'Last: ' + (latest.summary || '') + ' \u00B7 just now';
+  }
+}
+
+// ═══════════ Load Historical Hook Events on Init ═══════════
+async function loadHistoricalHookEvents() {
+  try {
+    for (const agent of agentRoster) {
+      const res = await fetch(`/api/agents/${agent.name}/hook-events?limit=50`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!agentHookEvents[agent.name]) agentHookEvents[agent.name] = {};
+      // Events are newest-first; process oldest-first so latest wins
+      for (const ev of (data.events || []).reverse()) {
+        if (ev.tool) {
+          agentHookEvents[agent.name][ev.tool] = {
+            exit_code: ev.exit_code,
+            summary: ev.summary,
+            timestamp: ev.timestamp
+          };
+        }
+      }
+      updateAgentGateStatus(agent.name);
+    }
+  } catch (e) {
+    console.warn('Failed to load historical hook events:', e);
+  }
+}
+
+// ═══════════ Gates Dashboard ═══════════
+async function loadGatesDashboard() {
+  const grid = document.getElementById('gatesGrid');
+  if (!grid) return;
+
+  try {
+    const res = await fetch('/api/hooks/events/all?limit=200');
+    const data = await res.json();
+    const events = data.events || [];
+
+    // Group by tool, get latest status per tool
+    const toolStatus = {};
+    events.forEach(ev => {
+      if (!ev.tool) return;
+      const key = ev.tool;
+      if (!toolStatus[key] || ev.timestamp > toolStatus[key].timestamp) {
+        toolStatus[key] = ev;
+      }
+    });
+
+    // Build gate cards grouped by gate naming convention
+    const gates = {
+      'Gate 1: Deterministic': ['pytest', 'flake8', 'mypy', 'bandit', 'pip-audit', 'coverage', 'secret-scan'],
+      'Gate 2: Integration': ['flyctl-deploy', 'health-poll', 'sentry-check'],
+      'Gate 3: AI Review': ['greptile', 'coderabbit-cli', 'claude-review'],
+    };
+
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+    for (const [gateName, tools] of Object.entries(gates)) {
+      const card = document.createElement('div');
+      // Determine overall gate status for glow color
+      const toolStatuses = tools.map(t => toolStatus[t]);
+      const anyFail = toolStatuses.some(s => s && s.exit_code !== 0);
+      const allRun = toolStatuses.every(s => s);
+      const gateState = anyFail ? 'gate-fail' : (allRun ? 'gate-pass' : '');
+      card.className = 'gate-card ' + gateState;
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'gate-card-title';
+      titleEl.textContent = gateName;
+      card.appendChild(titleEl);
+
+      tools.forEach(tool => {
+        const ev = toolStatus[tool];
+        let statusClass = 'pending';
+        let statusText = '\u2014';
+        if (ev) {
+          statusClass = ev.exit_code === 0 ? 'pass' : 'fail';
+          statusText = ev.exit_code === 0 ? 'PASS' : 'FAIL';
+        }
+        const row = document.createElement('div');
+        row.className = 'gate-tool-row';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'gate-tool-name';
+        nameSpan.textContent = tool;
+        const statusSpan = document.createElement('span');
+        statusSpan.className = 'gate-tool-status ' + statusClass;
+        statusSpan.textContent = statusText;
+        row.appendChild(nameSpan);
+        row.appendChild(statusSpan);
+        card.appendChild(row);
+      });
+
+      grid.appendChild(card);
+    }
+  } catch (err) {
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+    const errDiv = document.createElement('div');
+    errDiv.style.color = 'var(--text-secondary)';
+    errDiv.textContent = 'Failed to load gate data';
+    grid.appendChild(errDiv);
+  }
+}
+
+// ═══════════ Roles Registry (model hints) ═══════════
+let rolesRegistry = null;
+
+async function loadRolesRegistry() {
+  if (rolesRegistry) return rolesRegistry;
+  try {
+    const res = await fetch('/api/registries/roles');
+    rolesRegistry = await res.json();
+    return rolesRegistry;
+  } catch (e) { return {}; }
+}
+
+async function onRoleChange(roleType) {
+  const roles = await loadRolesRegistry();
+  const role = roles[roleType];
+  const hintEl = document.getElementById('modelHint');
+  const modelSelect = document.getElementById('dModel');
+
+  if (role && role.model_hint_label) {
+    if (hintEl) {
+      hintEl.textContent = role.model_hint_label;
+      hintEl.style.display = 'block';
+    }
+    if (modelSelect && role.model_hint) {
+      modelSelect.value = role.model_hint;
+    }
+  } else {
+    if (hintEl) hintEl.style.display = 'none';
+    if (role && role.model_hint && modelSelect) {
+      modelSelect.value = role.model_hint;
+    }
+  }
+}
+
+// ═══════════ Send ═══════════
+let _lastSendTime = 0;
+function send() {
+  // Debounce: prevent double-tap / double-fire within 500ms
+  const now = Date.now();
+  if (now - _lastSendTime < 500) return;
+  _lastSendTime = now;
+
+  let text = $input.value.trim();
+  const chipEl = $('attachChip');
+  const attachPath = chipEl ? chipEl.dataset.path : '';
+  if (attachPath) {
+    text = (text ? text + ' ' : '') + `[uploaded: ${attachPath}]`;
+  }
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ sender: 'gurvinder', target: $target.value, content: text, type: 'message' }));
+  renderMsg({ sender: 'gurvinder', target: $target.value, content: text, type: 'message', timestamp: new Date().toISOString() });
+  scrollEnd();
+  $input.value = '';
+  $input.style.height = 'auto';
+  $target.value = 'all';
+  // Clear attachment chip
+  if (chipEl) { chipEl.style.display = 'none'; chipEl.dataset.path = ''; }
+  updateSendVisibility();
+}
+
+function scrollEnd() {
+  // Only auto-scroll if user is near the bottom (within 150px)
+  const nearBottom = ($msgs.scrollHeight - $msgs.scrollTop - $msgs.clientHeight) < 150;
+  if (nearBottom) {
+    $msgs.scrollTop = $msgs.scrollHeight;
+  }
+}
+
+function scrollForce() {
+  $msgs.scrollTop = $msgs.scrollHeight;
+}
+
+// ═══════════ Events ═══════════
+function updateSendVisibility() {
+  const hasText = $input.value.trim().length > 0;
+  const hasAttachment = $('attachChip') && $('attachChip').style.display !== 'none';
+  if (hasText || hasAttachment) {
+    $send.classList.add('visible');
+    $send.disabled = false;
+  } else {
+    $send.classList.remove('visible');
+    $send.disabled = true;
+  }
+}
+
+$input.addEventListener('input', () => {
+  $input.style.height = 'auto';
+  $input.style.height = Math.min($input.scrollHeight, 88) + 'px';
+  updateSendVisibility();
+});
+$input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+$send.addEventListener('click', send);
+
+// ═══════════ Dynamic scroll padding (mobile) ═══════════
+if (window.innerWidth < 768) {
+  const inputBar = document.querySelector('.input-bar');
+  const tabBar = document.querySelector('.tab-bar');
+
+  function updateScrollPadding() {
+    const inputH = inputBar ? inputBar.offsetHeight : 80;
+    const tabH = tabBar ? tabBar.offsetHeight : 50;
+    $msgs.style.paddingBottom = (inputH + tabH + 16) + 'px';
+  }
+
+  // Initial calculation
+  updateScrollPadding();
+
+  // Recalculate when input bar resizes (multi-line text, attachment chip)
+  if (typeof ResizeObserver !== 'undefined' && inputBar) {
+    new ResizeObserver(updateScrollPadding).observe(inputBar);
+  }
+
+  // Also recalculate when textarea resizes
+  $input.addEventListener('input', () => {
+    setTimeout(updateScrollPadding, 50);
+  });
+}
+
+// ═══════════ Role Presets ═══════════
+const ROLE_PRESETS = {
+  supervisor: {
+    role: "Strategic brain. Reads Jira, decomposes work into task briefs using Sequential Thinking, assigns to pipeline agents, reviews QA reports, approves merges. Never writes code.",
+    instructions: "SUPERVISOR_INSTRUCTIONS.md",
+    prompt: "Invoke the supervisor-role skill to load your identity and operating instructions. Then: check Jira for current sprint state and read docs/PROJECT_STATUS.md.",
+  },
+  scout: {
+    role: "Research and investigation. Analyses code, maps blast radius, verifies dependencies, produces research ledgers at docs/research/. Works ahead of Engineers. Never writes code.",
+    instructions: "SCOUT_INSTRUCTIONS.md",
+    prompt: "Invoke the scout-role skill to load your identity and operating instructions. Then: check Jira 'Scout Review' column for your assignment.",
+  },
+  engineer: {
+    role: "Implementation. Receives task brief + research ledger, works in isolated git worktree, follows Superpowers TDD workflow, produces tested code on feature branches.",
+    instructions: "ENGINEER_INSTRUCTIONS.md",
+    prompt: "Invoke the engineer-role skill to load your identity and operating instructions. Then: read the task brief from Supervisor and the research ledger at docs/research/<STORY-ID>_notes.md.",
+  },
+  qa: {
+    role: "Quality gate. Runs full verification suite (deterministic + QODO MCP + CodeRabbit CLI). Produces two-section QA reports at docs/qa/. Verdict is PASS or FAIL with evidence. Never writes code.",
+    instructions: "QA_INSTRUCTIONS.md",
+    prompt: "Invoke the qa-role skill to load your identity and operating instructions. Then: check Jira 'QA Review' column and checkout the feature branch.",
+  },
+  'git-agent': {
+    role: "Persistence backbone. All git operations: commits, branches, merges, cleanup. Six commit points per task. Blocks merges without QA PASS report. Never writes code.",
+    instructions: "GIT_AGENT_INSTRUCTIONS.md",
+    prompt: "Invoke the git-agent-role skill to load your identity and operating instructions. Then: check for pending commit requests in the war room.",
+  },
+  chronicler: {
+    role: "Silent observer. Reads War Room, research ledgers, QA reports, git log. Produces weekly learnings with Proposed Changes section. Flags drift immediately.",
+    instructions: "CHRONICLER_INSTRUCTIONS.md",
+    prompt: "Invoke the chronicler-role skill to load your identity and operating instructions. Then: read war room history and check recent git log.",
+  },
+};
+
+// ═══════════ Drawer ═══════════
+const $drawer = $('drawer'), $overlay = $('drawerOverlay');
+const $dName = $('dName'), $dRoleType = $('dRoleType'), $dRole = $('dRole'), $dPrompt = $('dPrompt');
+const $dModel = $('dModel'), $dSkipPerms = $('dSkipPerms');
+const $btnLaunch = $('btnLaunch'), $drawerErr = $('drawerError');
+const $dirBrowser = $('dirBrowser'), $dirList = $('dirList');
+const $dirCurrent = $('dirCurrent'), $dirUp = $('dirUp'), $dirSelect = $('dirSelect');
+const $dirSelectedWrap = $('dirSelectedWrap'), $dirPillPath = $('dirPillPath'), $dirPillClear = $('dirPillClear');
+
+let drawerSelectedDir = '';
+let drawerBrowsePath = '~';
+
+function openDrawer() {
+  $drawer.classList.add('open');
+  $overlay.classList.add('open');
+  // Reset form
+  $dName.value = '';
+  if ($dRoleType) $dRoleType.value = '';
+  $dRole.value = '';
+  $dPrompt.value = '';
+  $dModel.value = 'opus';
+  $dSkipPerms.checked = true;
+  $drawerErr.classList.remove('show');
+  $drawerErr.textContent = '';
+  $btnLaunch.disabled = false;
+  $btnLaunch.textContent = 'LAUNCH AGENT';
+  // Reset directory browser
+  drawerSelectedDir = '';
+  $dirSelectedWrap.style.display = 'none';
+  $dirBrowser.style.display = 'block';
+  drawerBrowsePath = '~';
+  loadDirectory('~');
+  $dName.focus();
+}
+
+function closeDrawer() {
+  $drawer.classList.remove('open');
+  $overlay.classList.remove('open');
+}
+
+$('btnNewAgent').addEventListener('click', openDrawer);
+$('drawerClose').addEventListener('click', closeDrawer);
+$overlay.addEventListener('click', closeDrawer);
+
+// Close on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && $drawer.classList.contains('open')) closeDrawer();
+});
+
+// ═══════════ Color + Icon Pickers ═══════════
+const $colorPicker = $('dColorPicker');
+const $iconPicker = $('dIconPicker');
+let selectedColor = '#b388ff';
+let selectedIcon = 'crown';
+
+// Populate icon picker grid
+if ($iconPicker) {
+  Object.entries(AVATAR_ICONS).forEach(([key, svg]) => {
+    const cell = document.createElement('div');
+    cell.className = 'icon-cell' + (key === selectedIcon ? ' selected' : '');
+    cell.dataset.icon = key;
+    cell.innerHTML = svg;
+    cell.onclick = () => {
+      $iconPicker.querySelectorAll('.icon-cell').forEach(c => c.classList.remove('selected'));
+      cell.classList.add('selected');
+      selectedIcon = key;
+    };
+    $iconPicker.appendChild(cell);
+  });
+}
+
+// Color picker click handler
+if ($colorPicker) {
+  $colorPicker.querySelectorAll('.color-swatch').forEach(swatch => {
+    swatch.onclick = () => {
+      $colorPicker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+      selectedColor = swatch.dataset.color;
+    };
+  });
+}
+
+// Auto-select color and icon when role type changes
+const $dRoleTypeForPicker = $('dRoleType');
+if ($dRoleTypeForPicker) {
+  $dRoleTypeForPicker.addEventListener('change', () => {
+    const rt = $dRoleTypeForPicker.value;
+    if (rt && ROLE_COLOR_MAP[rt]) {
+      selectedColor = ROLE_COLOR_MAP[rt];
+      if ($colorPicker) {
+        $colorPicker.querySelectorAll('.color-swatch').forEach(s => {
+          s.classList.toggle('selected', s.dataset.color === selectedColor);
+        });
+      }
+    }
+    if (rt && ROLE_ICON_MAP[rt]) {
+      selectedIcon = ROLE_ICON_MAP[rt];
+      if ($iconPicker) {
+        $iconPicker.querySelectorAll('.icon-cell').forEach(c => {
+          c.classList.toggle('selected', c.dataset.icon === selectedIcon);
+        });
+      }
+    }
+  });
+}
+
+// ─── Role type preset handler ───
+$dRoleType.onchange = () => {
+  const rt = $dRoleType.value;
+  const preset = ROLE_PRESETS[rt];
+  if (preset) {
+    $dRole.value = preset.role;
+    $dPrompt.value = preset.prompt;
+  } else if (rt === 'other' || rt === '') {
+    $dRole.value = '';
+    $dPrompt.value = '';
+  }
+  // Model hint from role registry
+  onRoleChange(rt);
+};
+
+// ─── Name auto-format ───
+$dName.addEventListener('input', () => {
+  let v = $dName.value.toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-{2,}/g, '-');
+  if (v.startsWith('-')) v = v.slice(1);
+  $dName.value = v;
+});
+
+// ─── Directory browser ───
+async function loadDirectory(path) {
+  $dirList.innerHTML = '<div class="dir-browser-loading">Loading...</div>';
+  try {
+    const res = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);
+    const data = await res.json();
+    if (data.error) {
+      $dirList.innerHTML = `<div class="dir-browser-empty">${esc(data.error)}</div>`;
+      return;
+    }
+    drawerBrowsePath = data.current;
+    $dirCurrent.textContent = data.current.replace(/^\/Users\/[^/]+/, '~');
+    $dirList.innerHTML = '';
+    if (data.directories.length === 0) {
+      $dirList.innerHTML = '<div class="dir-browser-empty">No subdirectories</div>';
+    } else {
+      data.directories.forEach(d => {
+        const item = document.createElement('div');
+        item.className = 'dir-browser-item';
+        item.textContent = '\uD83D\uDCC1 ' + d.name;
+        item.addEventListener('click', () => loadDirectory(d.path));
+        $dirList.appendChild(item);
+      });
+    }
+    // Store parent for up button
+    $dirUp.dataset.parent = data.parent;
+  } catch (err) {
+    $dirList.innerHTML = '<div class="dir-browser-empty">Failed to load</div>';
+  }
+}
+
+$dirUp.addEventListener('click', () => {
+  const parent = $dirUp.dataset.parent;
+  if (parent) loadDirectory(parent);
+});
+
+$dirSelect.addEventListener('click', () => {
+  drawerSelectedDir = drawerBrowsePath;
+  $dirPillPath.textContent = drawerBrowsePath.replace(/^\/Users\/[^/]+/, '~');
+  $dirSelectedWrap.style.display = 'block';
+  $dirBrowser.style.display = 'none';
+});
+
+$dirPillClear.addEventListener('click', () => {
+  drawerSelectedDir = '';
+  $dirSelectedWrap.style.display = 'none';
+  $dirBrowser.style.display = 'block';
+  loadDirectory(drawerBrowsePath);
+});
+
+// ─── Launch agent ───
+$btnLaunch.addEventListener('click', async () => {
+  $drawerErr.classList.remove('show');
+  $drawerErr.textContent = '';
+
+  const name = $dName.value.trim().replace(/-$/, '');
+  const role = $dRole.value.trim();
+  const directory = drawerSelectedDir;
+
+  // Validation
+  if (!name || name.length < 2) {
+    showDrawerError('Agent name must be at least 2 characters');
+    return;
+  }
+  if (!/^[a-z0-9][a-z0-9\-]{0,18}[a-z0-9]$/.test(name)) {
+    showDrawerError('Name must be 2-20 chars, lowercase alphanumeric + hyphens');
+    return;
+  }
+  if (!directory) {
+    showDrawerError('Select a working directory');
+    return;
+  }
+  if (!role) {
+    showDrawerError('Role is required');
+    return;
+  }
+
+  $btnLaunch.disabled = true;
+  $btnLaunch.textContent = 'CREATING...';
+
+  const roleType = $dRoleType ? $dRoleType.value : 'other';
+  const preset = ROLE_PRESETS[roleType];
+  const instructions = preset ? preset.instructions : '';
+
+  try {
+    const res = await fetch('/api/agents/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        directory: directory,
+        role: role,
+        role_type: roleType,
+        instructions: instructions,
+        initial_prompt: $dPrompt.value.trim(),
+        model: $dModel.value,
+        skip_permissions: $dSkipPerms.checked,
+        color: selectedColor,
+        icon: selectedIcon,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      showDrawerError(data.error || 'Failed to create agent');
+      $btnLaunch.disabled = false;
+      $btnLaunch.textContent = 'LAUNCH AGENT';
+      return;
+    }
+
+    // Success — the agent_created WS event will update the sidebar
+    // Also add locally in case WS event arrives late
+    if (!agentRoster.find(x => x.name === name)) {
+      agentRoster.push({ name: name, role: role, dynamic: true });
+    }
+    agentData[name] = {
+      presence: data.agent?.presence || 'active',
+      activity: data.agent?.activity || null,
+      in_room: true,
+      dynamic: true,
+    };
+    renderAgents();
+
+    // Add to target dropdown
+    if (!Array.from($target.options).find(o => o.value === name)) {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = `@${name}`;
+      $target.appendChild(opt);
+    }
+
+    closeDrawer();
+  } catch (err) {
+    showDrawerError('Network error: ' + err.message);
+    $btnLaunch.disabled = false;
+    $btnLaunch.textContent = 'LAUNCH AGENT';
+  }
+});
+
+function showDrawerError(msg) {
+  $drawerErr.textContent = msg;
+  $drawerErr.classList.add('show');
+}
+
+// ═══════════ File Browser ═══════════
+const $fileTree = $('fileTree');
+const $fpPath = $('fpPath');
+
+async function loadDir(path, depth, parentEl, autoExpand) {
+  try {
+    const resp = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
+    if (!resp.ok) return;
+    const data = await resp.json();
+
+    if (depth === 0) {
+      $fpPath.textContent = data.current === '.' ? 'project root' : data.current;
+    }
+
+    data.entries.forEach(entry => {
+      const item = document.createElement('div');
+      item.dataset.depth = depth;
+      item.dataset.path = entry.path;
+      item.dataset.type = entry.type;
+
+      if (entry.type === 'dir') {
+        item.className = 'fp-item dir';
+        const isExpanded = autoExpand && depth === 0;
+        item.innerHTML = `
+          <span class="fp-arrow">${isExpanded ? '▾' : '▸'}</span>
+          <span class="fp-name">${esc(entry.name)}</span>
+        `;
+        parentEl.appendChild(item);
+
+        const children = document.createElement('div');
+        children.style.display = isExpanded ? '' : 'none';
+        parentEl.appendChild(children);
+
+        if (isExpanded) {
+          loadDir(entry.path, depth + 1, children, true);
+        }
+
+        item.onclick = (e) => {
+          e.stopPropagation();
+          const arrow = item.querySelector('.fp-arrow');
+          if (children.style.display === 'none') {
+            children.style.display = '';
+            arrow.textContent = '▾';
+            if (!children.hasChildNodes()) {
+              loadDir(entry.path, depth + 1, children, false);
+            }
+          } else {
+            children.style.display = 'none';
+            arrow.textContent = '▸';
+          }
+        };
+
+      } else {
+        item.className = 'fp-item file';
+        item.draggable = true;
+        item.innerHTML = `<span class="fp-name">${esc(entry.name)}</span>`;
+
+        item.onclick = (e) => {
+          e.stopPropagation();
+          if (window.innerWidth < 768) {
+            const actions = [
+              { icon: SVG_ICONS.copy, label: 'Copy path', action: 'copy' },
+              { icon: SVG_ICONS.chat, label: 'Send to chat', action: 'chat' },
+              { icon: SVG_ICONS.user, label: 'Assign to agent...', action: 'assign' },
+            ];
+            if (entry.name.match(/\.(md|markdown)$/i)) {
+              actions.push({ icon: SVG_ICONS.eye, label: 'Preview', action: 'preview' });
+            }
+            showBottomSheet(entry.name, actions, (act) => {
+              if (act.action === 'copy') {
+                navigator.clipboard.writeText(entry.path).then(() => {
+                  // Brief visual feedback
+                }).catch(() => {});
+              } else if (act.action === 'chat') {
+                $input.value += entry.path + ' ';
+                switchTab('chat');
+                $input.focus();
+              } else if (act.action === 'assign') {
+                const agents = agentRoster.map(a => ({ label: `@${a.name}`, value: a.name, icon: SVG_ICONS.user }));
+                showBottomSheet('Assign to...', agents, (agent) => {
+                  $target.value = agent.value;
+                  if ($inputTarget) $inputTarget.textContent = `@${agent.value} ▼`;
+                  $input.value = `[file: ${entry.path}] `;
+                  switchTab('chat');
+                  $input.focus();
+                });
+              } else if (act.action === 'preview') {
+                fetch('/api/files/open', {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/json'},
+                  body: JSON.stringify({path: entry.path}),
+                }).then(r => r.json()).then(d => {
+                  if (d.url) window.open(d.url, '_blank');
+                });
+              }
+            });
+          } else {
+            fetch('/api/files/open', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({path: entry.path}),
+            }).then(r => r.json()).then(d => {
+              if (d.status === 'preview' && d.url) {
+                window.open(d.url, '_blank');
+              }
+            }).catch(() => {});
+          }
+        };
+
+        item.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', entry.path);
+          e.dataTransfer.setData('application/x-warroom-file', entry.path);
+          item.classList.add('dragging');
+        };
+        item.ondragend = () => item.classList.remove('dragging');
+
+        parentEl.appendChild(item);
+      }
+    });
+  } catch (e) {
+    console.error('File tree error:', e);
+  }
+}
+
+function initFileTree() {
+  $fileTree.innerHTML = '';
+  loadDir('.', 0, $fileTree, true);
+}
+
+// ═══════════ Drag & Drop: File → Chat Input ═══════════
+$input.addEventListener('dragover', (e) => {
+  if (e.dataTransfer.types.includes('application/x-warroom-file')) {
+    e.preventDefault();
+    $input.classList.add('drop-active');
+  }
+});
+
+$input.addEventListener('dragleave', () => {
+  $input.classList.remove('drop-active');
+});
+
+$input.addEventListener('drop', (e) => {
+  e.preventDefault();
+  $input.classList.remove('drop-active');
+  const filePath = e.dataTransfer.getData('application/x-warroom-file');
+  if (filePath) {
+    const start = $input.selectionStart;
+    const before = $input.value.slice(0, start);
+    const after = $input.value.slice(start);
+    $input.value = before + filePath + ' ' + after;
+    $input.focus();
+    $input.selectionStart = $input.selectionEnd = start + filePath.length + 1;
+  }
+});
+
+// ═══════════ Server Buttons ═══════════
+$('srvRestart').onclick = async () => {
+  if (!confirm('Restart the server? Agents keep running but dispatch pauses briefly.')) return;
+  try { await fetch('/api/server/restart', { method: 'POST' }); } catch (e) {}
+  $('srvRestart').textContent = 'Restarting...';
+  setTimeout(() => { $('srvRestart').textContent = 'Restart'; }, 5000);
+};
+
+$('srvLogs').onclick = () => { window.open('/api/server/logs', '_blank'); };
+
+// ═══════════ Roll Call ═══════════
+$('rollCallBtn').onclick = async () => {
+  const btn = $('rollCallBtn');
+  btn.textContent = 'Calling...';
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/api/roll-call', { method: 'POST' });
+    const data = await resp.json();
+    btn.textContent = `${data.responded.length}/${data.total} alive`;
+    setTimeout(() => { btn.textContent = 'Roll Call'; btn.disabled = false; }, 5000);
+  } catch (e) {
+    btn.textContent = 'Roll Call';
+    btn.disabled = false;
+  }
+};
+
+// ═══════════ Mobile Settings Gear ═══════════
+(function() {
+  const gear = document.createElement('button');
+  gear.id = 'mobileSettings';
+  gear.className = 'server-btn';
+  gear.textContent = '⚙';
+  gear.style.cssText = 'display:none;font-size:14px;padding:4px 8px';
+  gear.onclick = () => {
+    fetch('/api/server/health').then(r => r.json()).then(d => {
+      showBottomSheet('Server', [
+        { icon: SVG_ICONS.clock, label: `Uptime: ${d.uptime_human}` },
+        { icon: d.launchagent_active ? SVG_ICONS.dot_green : SVG_ICONS.dot_grey, label: `LaunchAgent: ${d.launchagent_active ? 'active' : 'not installed'}` },
+        { icon: SVG_ICONS.chart, label: `Agents: ${d.agents_alive} alive / ${d.agent_count} total` },
+        { icon: SVG_ICONS.refresh, label: 'Restart Server', action: 'restart' },
+        { icon: SVG_ICONS.logs, label: 'View Logs', action: 'logs' },
+      ], (item) => {
+        if (item.action === 'restart') {
+          if (confirm('Restart server?')) fetch('/api/server/restart', { method: 'POST' }).catch(() => {});
+        } else if (item.action === 'logs') {
+          window.open('/api/server/logs', '_blank');
+        }
+      });
+    }).catch(() => alert('Cannot reach server'));
+  };
+  const serverBar = document.querySelector('.server-bar');
+  if (serverBar) serverBar.appendChild(gear);
+})();
+
+// ═══════════ SVG Icon Map ═══════════
+const SVG_ICONS = {
+  copy: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  chat: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  user: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  eye: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+  broadcast: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  clock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  chart: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+  refresh: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+  logs: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+  folder: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  file: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>',
+  dot_green: '<svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#00e676"/></svg>',
+  dot_yellow: '<svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#ffd740"/></svg>',
+  dot_grey: '<svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#3e4e64"/></svg>',
+};
+
+// ═══════════ Mobile Tab Navigation ═══════════
+let activeTab = 'chat';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  const sidebar = document.querySelector('.sidebar');
+  const chat = document.querySelector('.chat');
+  const filePanel = document.querySelector('.file-panel');
+  const gatesPanel = document.getElementById('gatesPanel');
+
+  sidebar.classList.remove('mobile-active');
+  chat.classList.remove('mobile-hidden');
+  filePanel.classList.remove('mobile-active');
+  if (gatesPanel) gatesPanel.classList.remove('mobile-active');
+
+  if (tab === 'agents') {
+    sidebar.classList.add('mobile-active');
+    chat.classList.add('mobile-hidden');
+  } else if (tab === 'files') {
+    filePanel.classList.add('mobile-active');
+    chat.classList.add('mobile-hidden');
+  } else if (tab === 'gates') {
+    if (gatesPanel) gatesPanel.classList.add('mobile-active');
+    chat.classList.add('mobile-hidden');
+    loadGatesDashboard();
+  }
+}
+
+const $tabBar = $('tabBar');
+if ($tabBar) {
+  $tabBar.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => switchTab(tab.dataset.tab);
+  });
+}
+
+// ═══════════ Bottom Sheets ═══════════
+function showBottomSheet(title, items, onSelect) {
+  document.querySelectorAll('.bottom-sheet, .bottom-sheet-overlay').forEach(el => el.remove());
+
+  const overlay = document.createElement('div');
+  overlay.className = 'bottom-sheet-overlay open';
+
+  const sheet = document.createElement('div');
+  sheet.className = 'bottom-sheet';
+
+  let html = `<div class="bs-title">${title}</div>`;
+  items.forEach((item, i) => {
+    const iconHtml = item.icon ? `<span class="bs-icon">${item.icon}</span>` : '';
+    html += `<div class="bs-item" data-index="${i}">${iconHtml}<span>${item.label}</span></div>`;
+  });
+  html += `<div class="bs-cancel">Cancel</div>`;
+  sheet.innerHTML = html;
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(sheet);
+
+  requestAnimationFrame(() => sheet.classList.add('open'));
+
+  const close = () => {
+    sheet.classList.remove('open');
+    overlay.classList.remove('open');
+    setTimeout(() => { sheet.remove(); overlay.remove(); }, 250);
+  };
+
+  overlay.onclick = close;
+  sheet.querySelector('.bs-cancel').onclick = close;
+  sheet.querySelectorAll('.bs-item').forEach(el => {
+    el.onclick = () => {
+      const idx = parseInt(el.dataset.index);
+      close();
+      if (onSelect) onSelect(items[idx], idx);
+    };
+  });
+}
+
+// ═══════════ Mobile: Agent Picker ═══════════
+const $inputTarget = $('inputTarget');
+if ($inputTarget) {
+  $inputTarget.onclick = () => {
+    if (window.innerWidth >= 768) return;
+    const items = [{ label: '@all', value: 'all', icon: SVG_ICONS.broadcast }];
+    agentRoster.forEach(a => {
+      const d = agentData[a.name] || {};
+      const dot = d.presence === 'active' ? SVG_ICONS.dot_green : d.presence === 'busy' ? SVG_ICONS.dot_yellow : SVG_ICONS.dot_grey;
+      items.push({ label: `@${a.name}`, value: a.name, icon: dot });
+    });
+    showBottomSheet('Send to...', items, (item) => {
+      $target.value = item.value;
+      $inputTarget.textContent = `@${item.value} ▼`;
+      $input.focus();
+    });
+  };
+}
+
+// ═══════════ Mobile: Attachment ═══════════
+const $attachBtn = $('attachBtn');
+if ($attachBtn) {
+  $attachBtn.onclick = () => {
+    showBottomSheet('Attach', [
+      { icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>', label: 'Photo', action: 'photo' },
+      { icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>', label: 'Upload File', action: 'file' },
+      { icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>', label: 'Project File', action: 'project' },
+    ], (item) => {
+      if (item.action === 'photo' || item.action === 'file') {
+        const inp = document.createElement('input');
+        inp.type = 'file';
+        if (item.action === 'photo') inp.accept = 'image/*';
+        inp.onchange = async () => {
+          const f = inp.files[0];
+          if (!f) return;
+          const fd = new FormData();
+          fd.append('file', f);
+          try {
+            const resp = await fetch('/api/files/upload', { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (data.path) {
+              // Show attachment chip instead of inline text
+              const chipEl = $('attachChip');
+              const nameEl = $('attachName');
+              if (chipEl && nameEl) {
+                const fname = data.filename || data.path.split('/').pop();
+                nameEl.textContent = '📄 ' + (fname.length > 25 ? fname.slice(0, 22) + '...' : fname);
+                chipEl.style.display = 'flex';
+                chipEl.dataset.path = data.path;
+                updateSendVisibility();
+              }
+              $input.focus();
+            }
+          } catch (e) { alert('Upload failed'); }
+        };
+        inp.click();
+      } else if (item.action === 'project') {
+        showProjectFilePicker();
+      }
+    });
+  };
+}
+
+// Attachment chip remove
+const $attachRemove = $('attachRemove');
+if ($attachRemove) {
+  $attachRemove.onclick = () => {
+    const chipEl = $('attachChip');
+    if (chipEl) {
+      chipEl.style.display = 'none';
+      chipEl.dataset.path = '';
+    }
+    updateSendVisibility();
+    $input.focus();
+  };
+}
+
+async function showProjectFilePicker(path) {
+  path = path || '.';
+  try {
+    const resp = await fetch(`/api/files?path=${encodeURIComponent(path)}`);
+    const data = await resp.json();
+    const items = [];
+    if (data.parent != null) {
+      items.push({ icon: SVG_ICONS.back, label: '.. (back)', action: 'navigate', path: data.parent });
+    }
+    data.entries.forEach(e => {
+      if (e.type === 'dir') {
+        items.push({ icon: SVG_ICONS.folder, label: e.name, action: 'navigate', path: e.path });
+      } else {
+        items.push({ icon: SVG_ICONS.file, label: e.name, action: 'select', path: e.path });
+      }
+    });
+    showBottomSheet(`📂 ${data.current === '.' ? 'project root' : data.current}`, items, (item) => {
+      if (item.action === 'navigate') {
+        showProjectFilePicker(item.path);
+      } else if (item.action === 'select') {
+        $input.value += `[file: ${item.path}] `;
+        $input.focus();
+        if (window.innerWidth < 768) switchTab('chat');
+      }
+    });
+  } catch (e) { alert('Failed to load files'); }
+}
+
+// ═══════════ Init ═══════════
+fetch('/api/agents').then(r => r.json()).then(agents => {
+  agentRoster = agents;
+  agents.forEach(a => { agentData[a.name] = { presence: a.presence || 'offline', activity: a.activity || null, in_room: a.in_room !== false, dynamic: a.dynamic || false }; });
+  // Restore saved order from localStorage
+  const savedOrder = localStorage.getItem('warroom-agent-order');
+  if (savedOrder) {
+    try {
+      const order = JSON.parse(savedOrder);
+      agentRoster.sort((a, b) => {
+        const ai = order.indexOf(a.name);
+        const bi = order.indexOf(b.name);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
+    } catch(e) {}
+  }
+  renderAgents();
+  // Fetch historical hook events so agent cards show gate status on load
+  loadHistoricalHookEvents();
+}).catch(() => {});
+connect();
+
+// Reconnect WebSocket when returning from background (mobile Safari)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && (!ws || ws.readyState !== WebSocket.OPEN)) {
+    connect();
+  }
+});
+
+initFileTree();
+
+// ═══════════ Drag-and-Drop File Upload ═══════════
+(function initDragDrop() {
+  const composeArea = document.getElementById('msgInput');
+  if (!composeArea) return;
+
+  composeArea.addEventListener('dragover', (e) => {
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      composeArea.classList.add('drag-active');
+    }
+  });
+
+  composeArea.addEventListener('dragleave', () => {
+    composeArea.classList.remove('drag-active');
+  });
+
+  composeArea.addEventListener('drop', async (e) => {
+    if (!e.dataTransfer.files.length) return;
+    e.preventDefault();
+    composeArea.classList.remove('drag-active');
+
+    for (const file of e.dataTransfer.files) {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/files/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.filename) {
+          addFilePill(data.filename, file.type);
+        }
+      } catch (err) {
+        console.error('Upload failed:', err);
+      }
+    }
+  });
+})();
+
+function addFilePill(filename, mimeType) {
+  let container = document.getElementById('filePills');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'filePills';
+    container.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;';
+    const composeParent = document.getElementById('msgInput').parentElement;
+    composeParent.insertBefore(container, composeParent.firstChild);
+  }
+
+  const pill = document.createElement('span');
+  pill.className = 'file-pill';
+  const icon = mimeType && mimeType.startsWith('image/') ? '\uD83D\uDDBC' : '\uD83D\uDCC4';
+  const removeSpan = document.createElement('span');
+  removeSpan.style.cssText = 'cursor:pointer;margin-left:4px';
+  removeSpan.textContent = '\u00D7';
+  removeSpan.onclick = function() { this.parentElement.remove(); };
+  pill.textContent = icon + ' ' + filename + ' ';
+  pill.appendChild(removeSpan);
+  container.appendChild(pill);
+}
+</script>
+</body>
+</html>
