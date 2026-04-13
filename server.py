@@ -1367,7 +1367,7 @@ async def create_agent(req: AgentCreate):
             "[SYSTEM] Registry-skill drift detected. "
             "Run: python skill-engine/generate.py --all"
         )
-        await save_message("system", None, drift_msg, "system")
+        await save_message("system", "all", drift_msg, "system")
 
     # Validate name format
     if not NAME_PATTERN.match(req.name):
