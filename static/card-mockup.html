@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Card Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    color: #F2F2F7;
+    font-family: 'Source Sans 3', -apple-system, sans-serif;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(242,242,247,0.3);
+    margin-bottom: 12px;
+  }
+
+  .sidebar-mock {
+    width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* ═══ NEW AGENT CARD — Two-Column Dashboard ═══ */
+  .card {
+    background: #131313;
+    border-radius: 14px;
+    display: flex;
+    min-height: 140px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle at top left, rgba(175,130,255,0.08), transparent);
+    pointer-events: none;
+  }
+
+  .card:hover { background: #1B1B1B; }
+
+  /* Left column: identity */
+  .card-identity {
+    width: 130px;
+    min-width: 130px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .card-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .card-avatar svg { width: 22px; height: 22px; fill: white; }
+
+  .card-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    word-break: break-word;
+    cursor: pointer;
+  }
+  .card-name:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+  .card-role {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 11px;
+    color: rgba(242,242,247,0.5);
+    text-align: center;
+  }
+
+  .card-presence {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+  }
+
+  .presence-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  .presence-dot.active { background: #32D74B; box-shadow: 0 0 8px rgba(50,215,75,0.5); }
+  .presence-dot.busy { background: #FBBC05; box-shadow: 0 0 8px rgba(251,188,5,0.4); }
+  .presence-dot.typing { background: #18ffff; box-shadow: 0 0 8px rgba(24,255,255,0.4); }
+  .presence-dot.offline { background: #555; }
+
+  .presence-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+  }
+  .presence-label.active { color: #32D74B; }
+  .presence-label.busy { color: #FBBC05; }
+  .presence-label.typing { color: #18ffff; }
+  .presence-label.offline { color: #555; }
+
+  .card-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: auto;
+  }
+
+  .card-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: none;
+    background: rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .card-btn.cli { color: #448aff; }
+  .card-btn.cli:hover { background: rgba(68,138,255,0.10); }
+  .card-btn.msg { color: rgba(242,242,247,0.6); }
+  .card-btn.msg:hover { color: #32D74B; background: rgba(50,215,75,0.12); }
+  .card-btn.off { color: rgba(242,242,247,0.3); }
+  .card-btn.off:hover { color: #FF453A; background: rgba(255,69,58,0.08); }
+
+  /* Vertical divider */
+  .card-divider {
+    width: 1px;
+    background: rgba(255,255,255,0.06);
+    align-self: stretch;
+    margin: 12px 0;
+    flex-shrink: 0;
+  }
+
+  /* Right column: live activity */
+  .card-live {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .live-activity {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #F2F2F7;
+    padding: 8px 10px;
+    background: rgba(251,188,5,0.04);
+    border-left: 3px solid rgba(251,188,5,0.4);
+    border-radius: 0 8px 8px 0;
+  }
+
+  .live-activity.typing-state {
+    background: rgba(24,255,255,0.04);
+    border-left-color: rgba(24,255,255,0.4);
+  }
+
+  .live-activity-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(251,188,5,0.6);
+    margin-bottom: 4px;
+  }
+
+  .live-activity.typing-state .live-activity-label {
+    color: rgba(24,255,255,0.6);
+  }
+
+  .live-gates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .gate-dot {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.02em;
+  }
+  .gate-dot.pass { color: #32D74B; }
+  .gate-dot.fail { color: #FF453A; }
+  .gate-dot.pending { color: rgba(255,255,255,0.2); }
+
+  .live-last-event {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(242,242,247,0.5);
+    margin-top: auto;
+  }
+
+  .live-task {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(242,242,247,0.6);
+    padding: 4px 8px;
+    background: rgba(175,130,255,0.05);
+    border-radius: 6px;
+  }
+
+  .live-task-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(175,130,255,0.5);
+    margin-bottom: 2px;
+  }
+
+  /* ═══ Operator card variant ═══ */
+  .card.operator {
+    min-height: 80px;
+  }
+  .card.operator::before {
+    background: radial-gradient(circle at top left, rgba(255,145,0,0.08), transparent);
+  }
+  .card.operator .card-identity {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .card.operator .card-name { text-align: left; }
+  .card.operator .card-role { text-align: left; }
+  .card.operator .card-presence { margin-top: 0; }
+
+  /* ═══ Section labels ═══ */
+  .scenario-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(175,130,255,0.5);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 16px;
+    margin-bottom: 4px;
+  }
+
+  /* Long name variant */
+  .card.long-name .card-identity { width: 150px; min-width: 150px; }
+</style>
+</head>
+<body>
+
+<h2>Agent Card Mockup — Two-Column Dashboard Layout</h2>
+
+<div class="sidebar-mock">
+
+  <!-- Scenario 1: Operator card (simple, full-width) -->
+  <div class="scenario-label">Operator (you)</div>
+  <div class="card operator">
+    <div class="card-identity">
+      <div class="card-avatar" style="background:#ff9100">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M117.31,134l-72,64a8,8,0,1,1-10.63-12L100,128,34.69,70A8,8,0,1,1,45.32,58l72,64a8,8,0,0,1,0,12ZM216,184H120a8,8,0,0,0,0,16h96a8,8,0,0,0,0-16Z"/></svg>
+      </div>
+      <div>
+        <div class="card-name" style="color:#ff9100">gurvinder</div>
+        <div class="card-role">Operator</div>
+      </div>
+      <div class="card-presence" style="margin-left:auto">
+        <span class="presence-dot active"></span>
+        <span class="presence-label active">online</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenario 2: Active agent with activity -->
+  <div class="scenario-label">Active agent — working</div>
+  <div class="card">
+    <div class="card-identity">
+      <div class="card-avatar" style="background:#b388ff">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216.71,99.73l-15.6,93.59a8,8,0,0,1-7.89,6.68H62.78a8,8,0,0,1-7.89-6.68L39.29,99.73l.08,0a19.82,19.82,0,0,0,9.22-4.16h0L88,144l32-73.65h0a20,20,0,0,0,15.92,0h0L168,144l39.39-48.48h0a19.82,19.82,0,0,0,9.22,4.16Z" opacity="0.2"/><path d="M248,80a28,28,0,1,0-51.12,15.77l-26.79,33L146,73.4a28,28,0,1,0-36.06,0L85.91,128.74l-26.79-33a28,28,0,1,0-26.6,12L47,194.63A16,16,0,0,0,62.78,208H193.22A16,16,0,0,0,209,194.63l14.47-86.85A28,28,0,0,0,248,80Z"/></svg>
+      </div>
+      <div class="card-name" style="color:#b388ff">supervisor</div>
+      <div class="card-role">Coordinator</div>
+      <div class="card-presence">
+        <span class="presence-dot active"></span>
+        <span class="presence-label active">idle</span>
+      </div>
+      <div class="card-actions">
+        <button class="card-btn cli">cli</button>
+        <button class="card-btn msg">@</button>
+        <button class="card-btn off">x</button>
+      </div>
+    </div>
+    <div class="card-divider"></div>
+    <div class="card-live">
+      <div class="live-activity">
+        <div class="live-activity-label">Activity</div>
+        system: [TRACK-A] pipeline hardening: health 503 + Gate 1 JSON + Gate 2 polling + pip-audit. Directing Sprint 8 pipeline.
+      </div>
+      <div class="live-gates">
+        <span class="gate-dot pass">● pytest</span>
+        <span class="gate-dot pass">● flake8</span>
+        <span class="gate-dot pass">● mypy</span>
+        <span class="gate-dot fail">● bandit</span>
+        <span class="gate-dot pending">● coverage</span>
+      </div>
+      <div class="live-last-event">Last: flake8 clean · 2m ago</div>
+    </div>
+  </div>
+
+  <!-- Scenario 3: Agent actively working (busy state) -->
+  <div class="scenario-label">Active agent — busy (working)</div>
+  <div class="card">
+    <div class="card-identity">
+      <div class="card-avatar" style="background:#448aff">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M224,96a64,64,0,0,1-94.94,56L73,217A24,24,0,0,1,39,183L104,126.94a64,64,0,0,1,80-90.29L144,80l5.66,26.34L176,112l43.35-40A63.8,63.8,0,0,1,224,96Z" opacity="0.2"/><path d="M226.76,69a8,8,0,0,0-12.84-2.88l-40.3,37.19-17.23-3.7-3.7-17.23,37.19-40.3A8,8,0,0,0,187,29.24,72,72,0,0,0,88,96,72.34,72.34,0,0,0,94,124.94L33.79,177c-.15.12-.29.26-.43.39a32,32,0,0,0,45.26,45.26c.13-.13.27-.28.39-.42L131.06,162A72,72,0,0,0,232,96,71.56,71.56,0,0,0,226.76,69Z"/></svg>
+      </div>
+      <div class="card-name" style="color:#448aff">engineer</div>
+      <div class="card-role">Engineer</div>
+      <div class="card-presence">
+        <span class="presence-dot busy" style="animation: glow-y 1.2s ease-in-out infinite"></span>
+        <span class="presence-label busy">working</span>
+      </div>
+      <div class="card-actions">
+        <button class="card-btn cli">cli</button>
+        <button class="card-btn msg">@</button>
+        <button class="card-btn off">x</button>
+      </div>
+    </div>
+    <div class="card-divider"></div>
+    <div class="card-live">
+      <div class="live-task">
+        <div class="live-task-label">Task</div>
+        NS-114: WebSocket event broadcasting
+      </div>
+      <div class="live-activity">
+        <div class="live-activity-label">Activity</div>
+        Building NS-114 (WebSocket events). Implementing heartbeat broadcast via ws_manager parameter threading.
+      </div>
+      <div class="live-gates">
+        <span class="gate-dot pass">● pytest</span>
+        <span class="gate-dot pass">● flake8</span>
+        <span class="gate-dot pass">● mypy</span>
+        <span class="gate-dot pending">● bandit</span>
+        <span class="gate-dot pending">● coverage</span>
+      </div>
+      <div class="live-last-event">Last: pytest 947 passed · 5m ago</div>
+    </div>
+  </div>
+
+  <!-- Scenario 4: Long agent name -->
+  <div class="scenario-label">Long agent name — adapts</div>
+  <div class="card">
+    <div class="card-identity">
+      <div class="card-avatar" style="background:#18ffff">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M192,112a80,80,0,1,1-80-80A80,80,0,0,1,192,112Z" opacity="0.2"/><path d="M229.66,218.34,179.6,168.28a88.21,88.21,0,1,0-11.32,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>
+      </div>
+      <div class="card-name" style="color:#18ffff">scout-research-lead</div>
+      <div class="card-role">Research</div>
+      <div class="card-presence">
+        <span class="presence-dot active"></span>
+        <span class="presence-label active">idle</span>
+      </div>
+      <div class="card-actions">
+        <button class="card-btn cli">cli</button>
+        <button class="card-btn msg">@</button>
+        <button class="card-btn off">x</button>
+      </div>
+    </div>
+    <div class="card-divider"></div>
+    <div class="card-live">
+      <div class="live-activity">
+        <div class="live-activity-label">Activity</div>
+        Researching Sprint 9 (deferred PR #12 bugs) while Sprint 8 builds. All Sprint 8 research delivered. Pipeline never stops.
+      </div>
+      <div class="live-last-event">Last: Session started · just now</div>
+    </div>
+  </div>
+
+  <!-- Scenario 5: Offline / de-boarded -->
+  <div class="scenario-label">Offline agent</div>
+  <div class="card" style="opacity: 0.5">
+    <div class="card-identity">
+      <div class="card-avatar" style="background:#ff5252">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="currentColor"><path d="M216,56v56c0,96-88,120-88,120S40,208,40,112V56a8,8,0,0,1,8-8H208A8,8,0,0,1,216,56Z" opacity="0.2"/><path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Z"/></svg>
+      </div>
+      <div class="card-name" style="color:#ff5252">qa</div>
+      <div class="card-role">Quality Gate</div>
+      <div class="card-presence">
+        <span class="presence-dot offline"></span>
+        <span class="presence-label offline">offline</span>
+      </div>
+    </div>
+    <div class="card-divider"></div>
+    <div class="card-live">
+      <div style="color:rgba(242,242,247,0.3); font-family:'JetBrains Mono',monospace; font-size:11px; margin:auto 0;">
+        No active session
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  @keyframes glow-y { 50% { box-shadow: 0 0 14px rgba(251,188,5,0.7); } }
+</style>
+
+</body>
+</html>
